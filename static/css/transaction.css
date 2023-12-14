@@ -1,0 +1,61 @@
+
+.allbutton a{
+    color: white !important;
+    text-decoration: none;
+    border: 1px solid black;
+    color: black !important;
+}
+
+.allbutton{
+    margin-top: 1rem;
+    align-items: center;
+    text-align: center;
+ 
+}
+
+.allbutton a.active {
+    background-color: #007bff;  /* Change this color to your desired active color */
+    color: #fff !important;  /* Change this color to your desired text color for active state */
+}
+
+
+.pos-table {
+    width: 90%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    margin: auto;
+    margin-top: 1rem;
+    margin-bottom: 4rem;
+}
+
+.pos-table, th, td {
+    border: 1px solid #ddd;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+
+.pagination
+{
+    margin-left: 5% !important;
+}
+
+.pagination span
+{
+    color: green;
+}
+
+.step-links a{
+    text-decoration: none !important;
+}

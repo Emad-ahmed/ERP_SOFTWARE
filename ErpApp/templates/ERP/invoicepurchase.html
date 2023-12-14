@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=ArabicFont&display=swap" rel="stylesheet">
+
+    <title>Purchase Invoice</title>
+    {% load static %}
+
+    
+</head>
+<body>
+    <table>
+        <tr>
+            <td><span><h1>GULF HOUSE<br>ALUMINIUM WORKS</h1></span></td>
+            <td><p style="font-weight:bolder;">SHOP 1, BUILDING NO: 287, MOHAMMAD IBRAHIM STREET (32 BUILDING), KUWAIT CITY, KUWAIT</p></td>
+        </tr>
+    </table>
+
+    <div style="background-color:green; text-align:center">
+        <h1 style="color:white; padding-top:10px;">{{ status }} REQUEST</h1>
+    </div>
+
+    <div style="margin-top:30px">
+        <h6>{{set_pos_id.invoice_date}}</h6>
+        <p>To</p>
+        <p>Greetings from GULF HOUSE FOR ALUMINUM WORKS. We would like to reorder the following items:</p>
+        <table border="1" class="mytable" style="margin-bottom: 40px !important;">
+            <thead>
+                <tr>
+                    <th style="text-align:center; padding:5px">Serial</th>
+                    <th style="text-align:center; padding:5px">Item</th>
+                    <th style="text-align:center; padding:5px">Product Name</th>
+                    <th style="text-align:center; padding:5px">Unit</th>
+                    <th style="text-align:center; padding:5px">Quantity</th>
+                    <th style="text-align:center; padding:5px">Unit Price</th>
+                    <th style="text-align:center; padding:5px">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                    <tr>
+                        <td style="text-align:center; padding:5px">{{ forloop.counter }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.item_name }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.name }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.unit }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.quantity }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.unit_cost }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.subtotal }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p>I would appreciate it if you could provide us with a proforma invoice for the items listed above.</p>
+        <p>Your time to review our request is greatly appreciated. I look forward to hearing from you soon.</p> 
+    </div>
+
+
+    <table>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+
+
+    <div style="padding-top: 50px !important;">
+        <p style="line-height:0.6px">Best regards,</p>
+        <p style="line-height:0.6px">GULF HOUSE FOR ALUMINUM WORKS</p>
+        <p style="line-height:0.6px">procurement@gulfhousegroup.com</p>
+        <p style="line-height:0.6px">+965 99223382, 99255662</p>
+        <p style="line-height:0.6px">www.gulfhousegroup.com</p>
+    </div>
+
+
+</body>
+</html>

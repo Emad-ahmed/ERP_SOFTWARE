@@ -1,0 +1,391 @@
+body, h1, h2, h3, p, ul, li, figure, figcaption, div {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.search-container {
+    position: relative;
+    margin: 20px;
+    display: inline-block;
+}
+
+table input{
+    border:none !important;
+}
+
+.customer-details
+{
+    margin-left: 5% !important;
+    width: 70%;
+}
+
+.search-container
+{
+    margin-left: 5%;
+}
+
+.search-input {
+    width: calc(100% - 30px);
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.add-button {
+    width: 30px;
+    padding: 10px;
+    box-sizing: border-box;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+}
+
+.search-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    max-height: 150px;
+    overflow-y: auto;
+    display: none;
+    z-index: 1000;
+}
+
+.search-item {
+    padding: 10px;
+    cursor: pointer;
+}
+
+.search-item:hover {
+    background-color: #ddd;
+}
+
+.search-container + .search-container {
+    margin-left: 10px;
+}
+
+.added-items {
+    margin-top: 20px;
+}
+
+.added-item {
+    margin-right: 10px;
+    display: inline-block;
+    padding: 5px 10px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+}
+
+.delete-button
+{
+    background: red !important;
+    border: none !important;
+    color: white;
+    padding-left: 0.8rem;
+    padding-right: 0.8rem;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+.view-link
+{
+    background: rgb(0, 255, 255) !important;
+    color: black !important;
+    text-align: center !important;
+}
+
+.customer-details {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.customer-detail {
+    margin-right: 20px;
+}
+
+.modal{
+    margin-left: 0 !important;
+}
+
+.modal-content
+{
+    width: 70rem;
+    margin-left: -20rem;
+}
+
+
+.list-table {
+    width: 90% !important;
+    margin-top: 20px;
+    overflow-x:auto;
+    margin: auto;
+    z-index: -1 !important;
+}
+
+.list-table th, .list-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+.list-table th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.list-table input{
+    width:5rem;
+    text-align:center;
+}
+
+.myflex
+{
+    display: flex !important;
+    justify-content: space-between !important;
+}
+
+.myflex {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+}
+
+.myflex div {
+    width: 22%; /* Adjust the width based on your design preference */
+    padding: 1rem;
+    border: 1px solid #ccc;
+}
+
+.myflex p {
+    margin: 0.5rem 0;
+}
+
+.pbold {
+    font-weight: bolder;
+}
+
+
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Header Styles */
+header {
+    background-color: #007bff;
+    color: #fff;
+    padding: 20px 0;
+}
+
+header h1 {
+    font-size: 24px;
+}
+
+/* Modal Styles */
+.modal-content {
+    border-radius: 10px;
+}
+
+.modal-header {
+    background-color: #007bff;
+    color: #fff;
+    border-bottom: none;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+/* Search Container Styles */
+.search-container {
+    margin-bottom: 20px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+.search-list {
+    display: none;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.search-item {
+    padding: 10px;
+    cursor: pointer;
+}
+
+/* Table Styles */
+.list-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.list-table th, .list-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+.list-table th {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.editlist-table th {
+    background-color: rgb(184, 184, 184);
+    color: black;
+    text-align: center;
+}
+
+/* Summary Section Styles */
+#summarySection {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-left: 60%;
+    width: 20%;
+}
+
+#summarySection span{
+    font-weight: bolder;
+   
+}
+
+#summarySection p{
+    margin-bottom: 0.5rem;
+}
+
+/* Discount Input Styles */
+input[type="number"][placeholder="Discount"] {
+    width: 20%;
+    padding: 10px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    margin-left: 60%;
+}
+
+.mytransaction
+{
+    position: absolute;
+    right: 5%;
+    margin-top: 5%;
+}
+
+.mytransaction a{
+    color: white;
+    background: #000;
+}
+
+a#QuatationLink
+{
+    background-color: rgb(40, 142, 167);
+}
+
+a#PurchaseLink
+{
+    background-color: rgb(89, 0, 255);
+}
+
+
+
+/* Action Buttons Styles */
+a {
+    display: inline-block;
+    padding: 10px 20px;
+    margin-right: 10px;
+    text-decoration: none;
+    color: #fff;
+    border-radius: 5px;
+}
+
+a#draftLink {
+    background-color: #28a745;
+}
+
+a#CredittLink {
+    background-color: #007bff;
+}
+
+a#CashLink{
+    background-color: rgb(52, 14, 114)
+}
+
+/* Add more button styles as needed */
+
+/* Responsive Flexbox Styles */
+.myflex {
+    display: flex;
+    justify-content: space-between;
+}
+
+.myflex div {
+    width: 23%;
+}
+
+
+.mytime
+{
+    position: absolute;
+    right: 5rem;
+   
+}
+
+.allbuttonprint
+{
+    margin-left: 5%;
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 768px) {
+    .myflex {
+        flex-direction: column;
+    }
+
+    .myflex div {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+
+.mytransactionedit
+{
+    position: absolute;
+    right: 5%;
+    top:12rem;
+}
+    
+.mytransactionedit a{
+        color: white;
+        background: #000;
+}
+
+.colortransaction
+{
+            background: #9c2a2a !important;
+            color: white !important;
+}
+
+.colortransaction:hover
+{
+    background: white !important;
+    color: #9c2a2a !important;
+    border: 1px solid #9c2a2a !important;
+}

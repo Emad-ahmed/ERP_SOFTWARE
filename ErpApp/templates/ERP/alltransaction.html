@@ -1,0 +1,332 @@
+{% extends 'ERP/base.html' %}
+
+{% block title %}Transaction{% endblock %}
+
+{% block content %}
+
+<style>
+    .productid {
+        display: none;
+    }
+
+    .posid {
+        display: none;
+    }
+
+    .searchview
+    {
+        margin-top: 2rem;
+        width:30%;
+        margin-left: 5%;
+    }
+</style>
+
+{% load static %}
+<link rel="stylesheet" href="{% static "css/transaction.css" %}">
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudfla xre.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<div class="container">
+    
+</div>
+<div class="searchview">
+<input type="text" id="searchInput" class="form-control" placeholder="Search by Customer Name">
+</div>
+
+<div class="allbutton">
+    <a href="?status=draft" id="draftLink" class="btn {% if status_filter == 'draft' %}active{% endif %}">Draft</a>
+    <a href="?status=quatation" id="QuatationLink" class="btn {% if status_filter == 'quatation' %}active{% endif %}">Quotation</a>
+    <a href="?status=credit_sale" id="CredittLink" class="btn {% if status_filter == 'credit_sale' %}active{% endif %}">Credit Sale</a>
+    <a href="?status=cash" id="CashLink" class="btn {% if status_filter == 'cash' %}active{% endif %}">Cash</a>
+</div>
+
+<!-- Your home page content goes here -->
+
+<table class="pos-table">
+    <thead>
+        <tr>
+            <th class="posid">POS ID</th>
+            <th class="productid">ID</th>
+            <th>Customer</th>
+            <th>Total with Discount</th>
+            <th>Discount</th>
+            <th>Total Subtotal</th>
+            <th>Products</th>
+            <th>Status</th>
+            <th>Invoice Date</th>
+            <th>Invoice By</th>
+            <th>Edit</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for pos in pos_page %}
+        <tr>
+            <td class="posid">{{ pos.id }}</td>
+            <td class="productid">{{ pos.customer.id }}</td>
+            <td>{{ pos.customer.Debtors_Name }}</td>
+            <td>{{ pos.total_with_discount }}</td>
+            <td>{{ pos.discount }}</td>
+            <td>{{ pos.total_subtotal }}</td>
+            <td>
+                <button class="generatePdfButton btn btn-warning" data-target="{{ forloop.counter }}">Generate PDF</button>
+                <table class="inner-table" id="innerTable{{ forloop.counter }}">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Product Name</th>
+                            <th>UNIT</th>
+                            <th>SKU</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in pos.products.all %}
+                        <tr>
+                            <td><input type="text" class="item-input" value="{{ product.item_name }}"></td>
+                            <td><input type="text" class="name-input" value="{{ product.name }}"></td>
+                            <td><input type="text" class="unit-input" value="{{ product.unit }}"></td>
+                            <td><input type="number" class="sku-input" value="{{ product.sku }}"></td>
+                            <td><input type="number" class="quantity-input" value="{{ product.quantity }}"></td>
+                            <td><input type="number" class="unit-cost-input" value="{{ product.unit_cost }}"></td>
+                            <td><input type="number" class="subtotal-input" value="{{ product.subtotal }}"></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </td>
+            <td>{{ pos.status }}</td>
+            <td>{{ pos.invoice_date }}</td>
+            <td>{{ pos.invoice_by }}</td>
+            <td class="d-flex">
+                <button class="editButton btn btn-info" data-target="{{ forloop.counter }}">Edit</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if pos_page.has_previous %}
+            <a href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-info">&laquo; first</a>
+            <a href="?page={{ pos_page.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-primary">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ pos_page.number }} of {{ pos_page.paginator.num_pages }}.
+        </span>
+
+        {% if pos_page.has_next %}
+            <a href="?page={{ pos_page.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-warning">next</a>
+            <a href="?page={{ pos_page.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-success">last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.js"></script>
+
+<script>
+    // Ensure that your CSRF token is included in AJAX requests if needed
+    function getCSRFToken() {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            .split('=')[1];
+        return cookieValue;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const innertables = document.querySelectorAll('.inner-table');
+
+        innertables.forEach(table => {
+            table.style.display = "none";
+        });
+
+        document.querySelectorAll('.generatePdfButton').forEach(button => {
+            button.addEventListener('click', function () {
+                const clickedRowIndex = parseInt(this.getAttribute('data-target')) - 1;
+                const clickedRow = innertables[clickedRowIndex];
+                const outerTableRow = clickedRow.closest('tr');
+
+                const clickedRowData = {
+                    posid: outerTableRow.querySelector('td:nth-child(1)').textContent.trim(),
+                    customerid: outerTableRow.querySelector('td:nth-child(2)').textContent.trim(),
+                    totalWithDiscount: outerTableRow.querySelector('td:nth-child(4)').textContent.trim(),
+                    discount: outerTableRow.querySelector('td:nth-child(5)').textContent.trim(),
+                    totalSubtotal: outerTableRow.querySelector('td:nth-child(6)').textContent.trim(),
+                    status: outerTableRow.querySelector('td:nth-child(8)').textContent.trim(),
+                    invoiceBy: outerTableRow.querySelector('td:nth-child(10)').textContent.trim(),
+                };
+
+                const allRowsData = [clickedRowData];
+
+                allRowsData.forEach(rowData => {
+                    console.log('Row Data:');
+                    console.log('POS ID:', rowData.posid);
+                    console.log('Customer ID:', rowData.customerid);
+                    console.log('Total with Discount:', rowData.totalWithDiscount);
+                    console.log('Discount:', rowData.discount);
+                    console.log('Total Subtotal:', rowData.totalSubtotal);
+                    console.log('Invoice By:', rowData.invoiceBy);
+                    console.log('Status: ', rowData.status);
+                });
+
+                const rowAlreadyExists = doesRowExist(allRowsData, clickedRow);
+                if (!rowAlreadyExists) {
+                    const rowObj = getRowData(clickedRow);
+                    if (rowObj.name !== null) {
+                        allRowsData.push(rowObj);
+                    }
+                }
+
+                const innerTableRows = clickedRow ? clickedRow.querySelectorAll('tbody tr') : [];
+                innerTableRows.forEach(innerRow => {
+                    const innerRowAlreadyExists = doesRowExist(allRowsData, innerRow);
+                    if (!innerRowAlreadyExists) {
+                        const innerRowObj = getRowData(innerRow);
+                        if (innerRowObj.name !== null) {
+                            allRowsData.push(innerRowObj);
+                        }
+                    }
+                });
+
+                // Assuming 'saveInvoice' function is now available
+                saveInvoice(allRowsData, clickedRowData.status);
+            });
+
+        });
+
+        function getRowData(row) {
+            return {
+                item_name: getValue(row, '.item-input'),
+                name: getValue(row, '.name-input'),
+                unit: getValue(row, '.unit-input'),
+                sku: parseFloat(getValue(row, '.sku-input')) || 0,
+                quantity: parseFloat(getValue(row, '.quantity-input')) || 0,
+                unitCost: parseFloat(getValue(row, '.unit-cost-input')) || 0,
+                subtotal: parseFloat(getValue(row, '.subtotal-input')) || 0
+            };
+        }
+
+        function getValue(row, selector) {
+            const input = row ? row.querySelector(selector) : null;
+            return input ? input.value : null;
+        }
+
+        function saveInvoice(allRowsData, status) {
+            const posId = allRowsData[0].posid;
+            const customerId = allRowsData[0].customerid;
+            const discountValue = allRowsData[0].discount;
+            const totalSubtotal = allRowsData[0].totalSubtotal;
+            const totalWithDiscount = allRowsData[0].totalWithDiscount;
+
+            const productsArray = allRowsData.slice(1).map(row => ({
+                name: row.name,
+                item_name: row.item_name,
+                unit: row.unit,
+                sku: row.sku,
+                quantity: row.quantity,
+                unit_cost: row.unitCost,
+                subtotal: row.subtotal
+            }));
+
+            const requestData = {
+                customerId: customerId,  // Include customer ID directly
+                discountValue: discountValue,
+                productsArray: productsArray,
+                totalSubtotal: totalSubtotal,
+                totalWithDiscount: totalWithDiscount,
+                posid: posId
+            };
+
+            console.log('Request Data:', requestData);
+
+            fetch('/generate_invoice_pdf/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify(requestData),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Server Response:', data);
+                    // Handle the response, e.g., show a success message to the user
+                    alert(data.message);
+                    // Optionally, open the generated PDF in a new tab
+                    window.open(data.pdf_url, '_blank');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        document.querySelectorAll('.editButton').forEach(button => {
+            button.addEventListener('click', function () {
+                // Extract data from the clicked row
+                const clickedRowIndex = parseInt(this.getAttribute('data-target')) - 1;
+                const clickedRow = innertables[clickedRowIndex];
+                const outerTableRow = clickedRow.closest('tr');
+                const clickedRowData = {
+                    posid: outerTableRow.querySelector('td:nth-child(1)').textContent.trim(),
+                    customerid: outerTableRow.querySelector('td:nth-child(2)').textContent.trim(),
+                    totalWithDiscount: outerTableRow.querySelector('td:nth-child(4)').textContent.trim(),
+                    discount: outerTableRow.querySelector('td:nth-child(5)').textContent.trim(),
+                    totalSubtotal: outerTableRow.querySelector('td:nth-child(6)').textContent.trim(),
+                    status: outerTableRow.querySelector('td:nth-child(8)').textContent.trim(),
+                    invoiceBy: outerTableRow.querySelector('td:nth-child(10)').textContent.trim(),
+                };
+
+                // Prepare an array with the clicked row data
+                const allRowsData = [clickedRowData];
+                // Check if the row already exists in the array
+                const rowAlreadyExists = doesRowExist(allRowsData, clickedRow);
+                // If the row doesn't exist, add it to the array
+                if (!rowAlreadyExists) {
+                    const rowObj = getRowData(clickedRow);
+                    if (rowObj.name !== null) {
+                        allRowsData.push(rowObj);
+                    }
+                }
+
+                // Process inner table rows
+                const innerTableRows = clickedRow ? clickedRow.querySelectorAll('tbody tr') : [];
+                innerTableRows.forEach(innerRow => {
+                    const innerRowAlreadyExists = doesRowExist(allRowsData, innerRow);
+                    if (!innerRowAlreadyExists) {
+                        const innerRowObj = getRowData(innerRow);
+                        if (innerRowObj.name !== null) {
+                            allRowsData.push(innerRowObj);
+                        }
+                    }
+                });
+
+                // Call the 'editInvoice' function with the data
+                const allRowsDataJSON = JSON.stringify(allRowsData);
+                // Create a URL with the encoded parameter
+                const newEditInvoiceURL = `/new_edit_invoice?data=${encodeURIComponent(allRowsDataJSON)}`;
+                // Open the new_edit_invoice page with the data as a parameter
+                window.open(newEditInvoiceURL);
+            });
+        });
+
+        function doesRowExist(rowsArray, row) {
+            const rowObj = getRowData(row);
+            return rowsArray.some(existingRow => JSON.stringify(existingRow) === JSON.stringify(rowObj));
+        }
+
+    });
+</script>
+
+<script>
+    $('#searchInput').on('keyup', function () {
+        const searchTerm = $(this).val().toLowerCase();
+        $('table.pos-table tbody tr').filter(function () {
+            $(this).toggle($(this).text().toLowerCase().indexOf(searchTerm) > -1);
+        });
+    });
+</script>
+
+{% endblock %}
