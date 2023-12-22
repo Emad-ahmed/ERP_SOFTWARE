@@ -59,3 +59,18 @@ tbody tr:nth-child(even) {
 .step-links a{
     text-decoration: none !important;
 }
+
+.fa-exclamation-triangle
+{
+    color:rgb(255, 136, 0) !important;
+}
+
+.fa-check
+{
+    color: green;
+}
+
+.fa-times, .fa-window-close
+{
+    color: red !important;
+}

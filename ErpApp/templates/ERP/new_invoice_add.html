@@ -6,6 +6,17 @@
 
 {% load static %}
 
+<style>
+    #errorshow
+    {
+        color:red;
+        text-align:center;
+        font-size:1.2rem;
+        margin-bottom: 1rem;
+        font-weight:bolder;
+    }
+</style>
+
 <link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
 
 
@@ -51,6 +62,10 @@
     </div>
 </div>
 
+<div>
+    <p id="errorshow"></p>
+</div>
+
 <table class="list-table">
     <thead>
         <tr>
@@ -60,6 +75,7 @@
             <th>SKU</th>
             <th>Unit Cost</th>
             <th>Unit</th>
+            <th>Purchase Price</th>
             <th>Quantity</th> 
             <th class="subtotal-cell">Subtotal</th> 
             <th>Action</th>
@@ -131,7 +147,6 @@
                 listItem.addEventListener('click', async function () {
                     input.value = item.Debtors_Name || item.name;
                     list.style.display = 'none';
-
                     // Display the full details in the added items container
                     displayDetails(item);
                 });
@@ -200,26 +215,53 @@
         
             // Add the details to the product table
             const row = productTable.insertRow();
-      
+
             // Iterate through the details and create input fields for each cell
             for (const key in details) {
                 if (details.hasOwnProperty(key)) {
                     const cell = row.insertCell();
                     const input = document.createElement('input');
                     input.classList.add('editable-input');
-                    input.setAttribute('type', 'text'); // You may want to use 'text' or 'number' based on your data type
+            
+                    // Get the index of the current cell
+                    const columnIndex = row.cells.length - 1;
+            
+                    // Set the type attribute based on the column index
+                    if (columnIndex === 4) {
+                        input.setAttribute('type', 'number');
+                        input.setAttribute('step', '0.01'); // Set step attribute for decimal values if needed
+                    } else if (columnIndex === 6) {
+                        input.setAttribute('type', 'password');
+                        input.setAttribute('step', '0.01'); // Set step attribute for decimal values if needed
+                    } else {
+                        input.setAttribute('type', 'text');
+                    }
+            
                     cell.appendChild(input);
-        
+            
                     // Populate input value based on details
                     input.value = details[key];
-        
+            
                     // Set up event listener for changes in inputs
                     input.addEventListener('input', function () {
                         // Your logic to handle input changes
+            
+                        // Log the values of column index 4 and column index 6
+                        if (columnIndex === 4 || columnIndex === 6) {
+                            const unitCost = parseFloat(row.cells[4].querySelector('.editable-input').value) || 0;
+                            const quantity = parseFloat(row.cells[6].querySelector('.editable-input').value) || 0;
+                            const productName = details.name; // Assuming the product name is stored in the 'name' property
+            
+                            if (unitCost < quantity) {
+                                console.log("Price Less Than Purchase Price for " + productName);
+                                document.getElementById("errorshow").innerHTML = "Price Less Than Purchase Price for " + productName;
+                            } else {
+                                document.getElementById("errorshow").innerHTML = "";
+                            }
+                        }
                     });
                 }
             }
-        
             // Add a quantity input field
             const quantityCell = row.insertCell();
             const quantityInput = document.createElement('input');
@@ -399,10 +441,10 @@
             const itemName = row.cells[1].querySelector('.editable-input').value;
             const Name = row.cells[2].querySelector('.editable-input').value;
             const Sku = row.cells[3].querySelector('.editable-input').value;
-            const quantity = parseFloat(row.cells[6].querySelector('.quantity-input').value) || 0;
+            const quantity = parseFloat(row.cells[7].querySelector('.quantity-input').value) || 0;
             const unitCost = parseFloat(row.cells[4].querySelector('.editable-input').value) || 0;
             const unit = row.cells[5].querySelector('.editable-input').value;
-            const subtotal = parseFloat(row.cells[7].querySelector('.subtotal-input').value) || 0;
+            const subtotal = parseFloat(row.cells[8].querySelector('.subtotal-input').value) || 0;
     
             // Create an object with product details
             const productDetails = {

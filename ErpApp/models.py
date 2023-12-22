@@ -142,7 +142,8 @@ class Product(models.Model):
     position = models.IntegerField(default=0, null=True, blank=True)
     rack = models.IntegerField(default=0,null=True, blank=True)
     row = models.IntegerField(default=0,null=True, blank=True)
-
+    max_order_quantity = models.FloatField(default=0,null=True, blank=True)
+    min_order_quantity = models.FloatField(default=0,null=True, blank=True)
     # Additional Information
     image = models.ImageField(upload_to='product_images/', null=True, blank=True)
     product_description = models.TextField(null=True, blank=True)
@@ -192,7 +193,7 @@ class InvoiceProduct(models.Model):
     name = models.CharField(max_length=255)
     item_name = models.CharField(max_length=255)
     sku = models.IntegerField()
-    quantity = models.IntegerField()
+    quantity = models.FloatField()
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
     unit = models.CharField(max_length=100, default="kg")
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
@@ -262,7 +263,7 @@ class SetPosPurchase(models.Model):
     delivery_status = models.CharField(
         max_length=100,
         choices=DELIVERY_STATUS_CHOICES,
-        default='pending',  
+        default='Pending',  
         null=True,
         blank=True
     )
@@ -278,3 +279,23 @@ class SetPosPurchase(models.Model):
 
     def __str__(self) -> str:
         return self.party.Party_Name
+    
+
+class Employee(models.Model):
+    full_name = models.CharField(max_length=255)
+    department = models.CharField(max_length=255)
+    job = models.CharField(max_length=255)
+    address = models.TextField()
+    city = models.CharField(max_length=255)
+    state = models.CharField(max_length=255)
+    postal_code = models.CharField(max_length=20)
+    birthday = models.DateField()
+    gender = models.CharField(max_length=10)
+    national_id = models.CharField(max_length=255)
+    hired_date = models.DateField()
+    card_number = models.CharField(max_length=255)
+    mobile_phone = models.CharField(max_length=20)
+    termination_date = models.DateField(null=True, blank=True)
+    
+    def __str__(self):
+        return self.full_name

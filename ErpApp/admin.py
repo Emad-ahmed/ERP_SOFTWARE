@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, CustomerList, ActivityLog, Product, ItemName,SetPos,InvoiceProduct,PartyList, SetPosPurchase
+from .models import CustomUser, CustomerList, ActivityLog, Product, ItemName,SetPos,InvoiceProduct,PartyList, SetPosPurchase, Employee
 
 from import_export.admin import ImportExportModelAdmin
 
@@ -82,7 +82,7 @@ class ProductAdmin(ImportExportModelAdmin):
             'fields': ('cogs', 'profit_margin_base_seeling','profit_margin_mrp', 'base_selling_price', 'mrp'),
         }),
         ('Stock Information', {
-            'fields': ('opening_stock',),
+            'fields': ('opening_stock','max_order_quantity','min_order_quantity',),
         }),
         ('Location and Position', {
             'fields': ('inventory_location', 'weight', 'position', 'rack', 'row'),
@@ -139,3 +139,12 @@ class PartyListAdmin(ImportExportModelAdmin):
         super().save_related(request, form, formsets, change)
 
     # Customize other admin options as needed
+
+
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'department', 'job', 'hired_date', 'termination_date')
+    search_fields = ('full_name', 'department', 'job', 'national_id', 'mobile_phone')
+    list_filter = ('department', 'job', 'gender')
+    ordering = ('full_name',)
+    list_per_page = 20
