@@ -7,7 +7,7 @@ from django.http import JsonResponse
 import json
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
-from .models import ActivityLog,CustomerList,Product, SetPos, InvoiceProduct, ItemName, PartyList, SetPosPurchase
+from .models import ActivityLog,CustomerList,Product, SetPos, InvoiceProduct, ItemName, PartyList, SetPosPurchase, Employee
 from django.views.decorators.csrf import csrf_exempt
 import os
 from django.conf import settings
@@ -23,8 +23,9 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
-
-
+from django.views.decorators.http import require_POST
+from .forms import CustomerListForm, PartyListForm, ItemNameForm, ProductForm, ProductUpdateForm, EmployeeForm
+from django.contrib import messages
 
 class LoginView(View):
     def get(self, request):
@@ -49,7 +50,10 @@ class LoginView(View):
 
 class HomeView(View):
     def get(self, request):
-        return render(request, 'ERP/home.html')
+        if request.user.is_authenticated:
+            return render(request, 'ERP/home.html')
+        else:
+            return redirect("/")
 
 
 class CustomerListView(View):
@@ -59,7 +63,7 @@ class CustomerListView(View):
 
 class ProductListView(View):
     def get(self, request):
-        product_data = list(Product.objects.values('id','item__name', 'name', 'sku', 'mrp', 'uom'))
+        product_data = list(Product.objects.values('id','item__name', 'name', 'sku', 'mrp', 'uom', 'purchase_price'))
         return JsonResponse({'product_data': product_data})
 
 class ItemListView(View):
@@ -324,12 +328,15 @@ def render_to_pdf(template_path, context):
 
 class TransactionView(View):
     template_name = 'ERP/alltransaction.html'
-    items_per_page = 10  # Set the number of items per page
+    items_per_page = 10  # Set the default number of items per page
 
     def get(self, request):
         # Get the value of the 'status' parameter from the URL
         status_filter = request.GET.get('status', 'draft')  # Set default value to 'draft'
 
+        # Get the value of the 'items_per_page' parameter from the URL
+        items_per_page = request.GET.get('items_per_page', self.items_per_page)
+        
         # Filter SetPos objects based on the status parameter
         if status_filter:
             setpos = SetPos.objects.filter(status=status_filter)
@@ -338,7 +345,7 @@ class TransactionView(View):
             setpos = SetPos.objects.all()
 
         # Pagination
-        paginator = Paginator(setpos, self.items_per_page)
+        paginator = Paginator(setpos, items_per_page)
         page = request.GET.get('page', 1)
 
         try:
@@ -350,9 +357,7 @@ class TransactionView(View):
             # If page is out of range (e.g., 9999), deliver the last page
             setpos_page = paginator.page(paginator.num_pages)
 
-        return render(request, self.template_name, {'pos_page': setpos_page, 'status_filter': status_filter})
-
-
+        return render(request, self.template_name, {'pos_page': setpos_page, 'status_filter': status_filter, 'items_per_page': int(items_per_page)})
 
 class EditInvoiceView(View):
     def get(self, request):
@@ -571,7 +576,7 @@ def save_invoice_purchase(request):
             products_array = data.get('productsArray')
             total_subtotal = data.get('totalSubtotal')
             total_with_discount = data.get('totalWithDiscount')
-            status = data.get('status', 'draft')  # Default to 'draft' if status is not provided
+            status = data.get('status', 'quatation')  # Default to 'draft' if status is not provided
 
             # Validate required fields
             if not customer_id  or not products_array or not total_subtotal or not total_with_discount:
@@ -598,6 +603,7 @@ def save_invoice_purchase(request):
                 total_subtotal=total_subtotal,
                 total_with_discount=total_with_discount,
                 status=status,
+                delivery_status = "Pending",
                 description = description,
                 invoice_by = request.user.username
             )
@@ -686,15 +692,19 @@ def render_to_pdf_ivoice(template_path, context):
 
 class PurchaseListView(View):
     template_name = 'ERP/showpurchaselist.html'
-    items_per_page = 10  # Set the number of items per page
+    default_items_per_page = 10  # Set the default number of items per page
 
     def get(self, request):
         # Get the value of the 'status' parameter from the URL
-        
+        status = request.GET.get('status', 'Pending')
+
+        # Get the selected number of items per page from the URL
+        items_per_page = int(request.GET.get('items_per_page', self.default_items_per_page))
+
         setpos = SetPosPurchase.objects.all()
 
         # Pagination
-        paginator = Paginator(setpos, self.items_per_page)
+        paginator = Paginator(setpos, items_per_page)
         page = request.GET.get('page', 1)
 
         try:
@@ -706,7 +716,8 @@ class PurchaseListView(View):
             # If page is out of range (e.g., 9999), deliver the last page
             setpos_page = paginator.page(paginator.num_pages)
 
-        return render(request, self.template_name, {'pos_page': setpos_page})
+        return render(request, self.template_name, {'pos_page': setpos_page, 'items_per_page': items_per_page})
+
 
 
 @csrf_exempt  # Use this decorator for simplicity. In production, implement proper CSRF protection.
@@ -804,3 +815,349 @@ def generate_invoice_pdf_purchase(request):
     else:
         return JsonResponse({'message': 'Invalid request method'}, status=400)
 
+
+
+class EditInvoicePurchaseView(View):
+    def get(self, request):
+        try:
+            # Get JSON data from the query parameters
+            data = json.loads(request.GET.get('allRowsData', '[]'))
+            status = request.GET.get('status', None)
+
+            # Prepare context for the template
+            context = {
+                'allRowsData': data,
+                'status': status,
+            }
+
+            # Render the template with the context data
+            return render(request, 'ERP/neweditinvoicepurchase.html', context)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+        
+
+
+@csrf_exempt
+def update_save_invoice_purchase(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+            posid = data.get('posid')
+            customer_id = data.get('customerId')
+            discount_value = data.get('discountValue', None)
+            products_array = data.get('productsArray')
+            total_subtotal = data.get('totalSubtotal')
+            total_with_discount = data.get('totalWithDiscount')
+            status = data.get('status', 'quatation')  # Default to 'draft' if status is not provided
+
+            # Validate required fields
+            if not posid or not customer_id or not products_array or not total_subtotal or not total_with_discount:
+                return JsonResponse({'message': 'Incomplete data in the request'}, status=400)
+
+            # Save customer details
+            try:
+                customer = CustomerList.objects.get(id=customer_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({'message': 'Customer does not exist'}, status=400)
+
+            # Check if an existing SetPos instance matches the criteria for update
+            existing_set_pos_instance = SetPosPurchase.objects.filter(id=posid).first()
+            description = existing_set_pos_instance.description
+            if existing_set_pos_instance:
+                # Update the existing SetPos instance
+                existing_set_pos_instance.discount = discount_value
+                existing_set_pos_instance.total_subtotal = total_subtotal
+                existing_set_pos_instance.total_with_discount = total_with_discount
+                existing_set_pos_instance.save()
+                set_pos_instance = existing_set_pos_instance
+            else:
+                # Create a new SetPos instance
+                set_pos_instance = SetPosPurchase.objects.create(
+                    id=posid,
+                    customer=customer,
+                    discount=discount_value,
+                    total_subtotal=total_subtotal,
+                    total_with_discount=total_with_discount,
+                    status=status,
+                    invoice_by=request.user.username
+                )
+
+            # Save products without enforcing uniqueness
+            products = []
+            for product_data in products_array:
+                product = InvoiceProduct.objects.create(**product_data)
+                products.append(product)
+
+            # Set the products for the SetPos instance
+            set_pos_instance.products.set(products)
+            set_pos_id = set_pos_instance
+
+            # Generate PDF for product details including customer details
+            if(status == "quatation"):
+                status = "Quatation"
+                product_pdf_content = generate_purchase_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status, description)
+            elif(status == "purchase"):
+                status = "Purchase"
+                product_pdf_content = generate_purchase_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status, description)
+            
+
+            # Save the PDF file
+            pdf_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
+            os.makedirs(pdf_dir, exist_ok=True)
+            pdf_path = os.path.join(pdf_dir, f'product_details_{set_pos_instance.id}.pdf')
+            with open(pdf_path, 'wb') as pdf_file:
+                pdf_file.write(product_pdf_content)
+
+            # Open the PDF file
+            subprocess.run(['start', '', pdf_path], shell=True)
+
+            # Include a success message and PDF URL in the JSON response
+            return JsonResponse({'message': 'Data saved successfully', 'pdf_url': pdf_path})
+        except Exception as e:
+            return JsonResponse({'message': f'Error: {str(e)}'}, status=500)
+    else:
+        return JsonResponse({'message': 'Invalid request method'}, status=400)
+
+
+@require_POST
+def delete_pos_purchase(request):
+    pos_id = request.POST.get('posId')
+
+    try:
+        pos_instance = SetPosPurchase.objects.get(id=pos_id)
+        pos_instance.delete()
+        response_data = {'message': 'Record deleted successfully'}
+        return JsonResponse(response_data, status=200)
+    except SetPosPurchase.DoesNotExist:
+        response_data = {'message': 'Record not found'}
+        return JsonResponse(response_data, status=404)
+    except Exception as e:
+        response_data = {'message': str(e)}
+        return JsonResponse(response_data, status=500)
+
+
+
+
+def create_or_update_customer(request, customer_id=None):
+    if customer_id:
+        customer = CustomerList.objects.get(id=customer_id)
+    else:
+        customer = CustomerList()
+
+    if request.method == 'POST':
+        form = CustomerListForm(request.POST, instance=customer)
+        if form.is_valid():
+            form.save()
+            return redirect('customer_list')  # Replace 'customer_list' with the actual URL name for your customer list view
+    else:
+        form = CustomerListForm(instance=customer)
+
+    return render(request, 'ERP/customeradd.html', {'form': form, 'customer': customer})
+
+
+def customer_list(request):
+    items_per_page = int(request.GET.get('items_per_page', 10))  # Default to 10 items per page
+    customers = CustomerList.objects.all()
+
+    paginator = Paginator(customers, items_per_page)
+    page = request.GET.get('page')
+
+    try:
+        customers = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver the first page.
+        customers = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g., 9999), deliver the last page of results.
+        customers = paginator.page(paginator.num_pages)
+
+    return render(request, 'ERP/customer_list.html', {'customers': customers, 'items_per_page': items_per_page})
+
+
+def delete_customer(request, customer_id):
+    # Retrieve the customer instance
+    customer = get_object_or_404(CustomerList, id=customer_id)
+    
+    customer.delete()
+    # Add a success message
+    messages.success(request, f"{customer.Debtors_Name} has been successfully deleted.")
+    # Redirect to the customer list page after deletion
+    return redirect('customer_list')
+
+
+
+def create_or_update_party(request, party_id=None):
+    if party_id:
+        party = get_object_or_404(PartyList, id=party_id)
+    else:
+        party = PartyList()
+    if request.method == 'POST':
+        form = PartyListForm(request.POST, instance=party)
+        if form.is_valid():
+            form.save()
+            return redirect('party_list')
+    else:
+        form = PartyListForm(instance=party)
+
+    return render(request, 'ERP/partylistadd.html', {'form': form, 'party': party})
+
+
+
+def party_list(request):
+    items_per_page = int(request.GET.get('items_per_page', 10))  # Default to 10 items per page
+    party = PartyList.objects.all()
+
+    paginator = Paginator(party, items_per_page)
+    page = request.GET.get('page')
+
+    try:
+        party = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver the first page.
+        party = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g., 9999), deliver the last page of results.
+        party = paginator.page(paginator.num_pages)
+
+    return render(request, 'ERP/party_list.html', {'party': party, 'items_per_page': items_per_page})
+
+
+def delete_party(request, party_id):
+    party = get_object_or_404(PartyList, id=party_id)
+    party.delete()
+    return redirect('party_list')
+
+    
+
+def create_or_update_item(request, item_id=None):
+    if item_id:
+        item = get_object_or_404(ItemName, id=item_id)
+        success_message = 'Item successfully updated.'
+    else:
+        item = ItemName()
+        success_message = 'Item successfully saved.'
+
+    if request.method == 'POST':
+        form = ItemNameForm(request.POST, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, success_message)
+            return redirect('item_list')
+    else:
+        form = ItemNameForm(instance=item)
+
+    return render(request, 'ERP/itemadd.html', {'form': form, 'item': item})
+
+
+def item_list(request):
+    items_per_page = int(request.GET.get('items_per_page', 10))  # Default to 10 items per page
+    item = ItemName.objects.all()
+
+    paginator = Paginator(item, items_per_page)
+    page = request.GET.get('page')
+
+    try:
+        item = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver the first page.
+        item = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g., 9999), deliver the last page of results.
+        item = paginator.page(paginator.num_pages)
+    return render(request, 'ERP/item_list.html', {'item': item, 'items_per_page': items_per_page})
+
+
+def delete_item(request, item_id):
+    item = get_object_or_404(ItemName, id=item_id)
+    item.delete()
+    return redirect('item_list')
+
+
+
+
+
+def create_or_update_product(request, product_id=None):
+    if product_id:
+        product = get_object_or_404(Product, id=product_id)
+    else:
+        product = Product()
+
+    if request.method == 'POST':
+        form = ProductUpdateForm(request.POST, instance=product)
+        if form.is_valid():
+            form.save()
+            return redirect('product_list')
+    else:
+        form = ProductForm(instance=product)
+
+    return render(request, 'ERP/productlistadd.html', {'form': form, 'product': product})
+
+
+def product_list(request):
+    items_per_page = int(request.GET.get('items_per_page', 10))  # Default to 10 items per page
+    product = Product.objects.all()
+
+    paginator = Paginator(product, items_per_page)
+    page = request.GET.get('page')
+
+    try:
+        product = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver the first page.
+        product = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g., 9999), deliver the last page of results.
+        product = paginator.page(paginator.num_pages)
+    return render(request, 'ERP/product_list.html', {'products': product, 'items_per_page': items_per_page})
+
+
+def delete_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    product.delete()
+    return redirect('product_list')
+
+
+
+def create_or_update_employee(request, employee_id=None):
+    if employee_id:
+        employee = get_object_or_404(Employee, id=employee_id)
+    else:
+        employee = Employee()
+    if request.method == 'POST':
+        form = EmployeeForm(request.POST, instance=employee)
+        if form.is_valid():
+            form.save()
+            return redirect('product_list')
+    else:
+        form = EmployeeForm(instance=employee)
+    
+    return render(request, 'ERP/employeelistadd.html', {'form': form, 'employee': employee})
+
+
+def employee_list(request):
+    items_per_page = int(request.GET.get('items_per_page', 10))  # Default to 10 items per page
+    employee = Employee.objects.all()
+    
+    paginator = Paginator(employee, items_per_page)
+    page = request.GET.get('page')
+
+    try:
+        employee = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver the first page.
+        employee = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g., 9999), deliver the last page of results.
+        employee = paginator.page(paginator.num_pages)
+    return render(request, 'ERP/employee_list.html', {'employees': employee, 'items_per_page': items_per_page})
+
+
+def delete_employee(request, employee_id):
+    employee = get_object_or_404(Employee, id=employee_id)
+    employee.delete()
+    return redirect('employee_list')

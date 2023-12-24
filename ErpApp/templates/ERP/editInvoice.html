@@ -136,7 +136,7 @@
                 <td><input type="text" value="${rowData.sku !== undefined ? rowData.sku : ''}"></td>
                 <td><input type="number" value="${rowData.unitCost !== undefined ? rowData.unitCost : ''}" class="unitCostInput"></td>
                 <td><input type="text" value="${rowData.unit !== undefined ? rowData.unit : ''}" class="unitInput"></td>
-                <td><input type="number" min="1" value="${rowData.quantity !== undefined ? rowData.quantity : '1'}" class="quantityInput"></td>
+                <td><input type="number" step="0.1"  value="${rowData.quantity !== undefined ? rowData.quantity : '1'}" class="quantityInput"></td>
                 <td class="subtotal-cell"><input type="number" value="${subtotal.toFixed(2)}" readonly class="subtotalInput"></td>
                 <td><button class='delete-button btn btn-danger'>Delete</button></td>
                 <td><button class='view-link btn btn-info' data-bs-toggle='modal' data-bs-target='#exampleModal' data-product-name='${rowData.name}'>View</button></td>

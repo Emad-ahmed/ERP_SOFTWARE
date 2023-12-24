@@ -1,7 +1,24 @@
 /* Dropdown Button */
+
+nav
+{
+  background: #000 !important;
+  
+}
+
+nav a{
+  color: white !important;
+}
+
+
+
+table
+{
+  overflow-x: auto !important;
+}
 .dropbtn {
 
-    color: black;
+    color: white !important;
     border: none;
    
   }
@@ -20,16 +37,24 @@
     min-width: 200px;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
     background: #fffefe;
+   
   }
   
   /* Links inside the dropdown */
   .dropdown-content a {
-    color: black;
-    padding: 12px 16px;
+    color: black !important;
+    padding: 5px 16px;
     text-decoration: none;
     display: block;
     z-index: 1000 !important;
     
+  }
+
+  .mytable
+  {
+    width: 90%;
+    overflow-x: auto !important;
+    margin: auto;
   }
   
   /* Change color of dropdown links on hover */
@@ -37,5 +62,11 @@
   
   /* Show the dropdown menu on hover */
   .dropdown:hover .dropdown-content {display: block;}
+
+  .items-per-page
+  {
+    margin-top: 1rem;
+    margin-left: 6.5% !important;
+  }
   
   /* Change the background color of the dropdown button when the dropdown content is shown */

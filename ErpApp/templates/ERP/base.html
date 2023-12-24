@@ -5,47 +5,143 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% endblock %}</title>
     {% load static %}
-    <link rel="stylesheet" href="{% static 'css/home.css' %}">
-    <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" />
 
+    <style>
+      .divider {
+          border-top: 1px solid #ccc; /* You can adjust the color and style of the divider */
+          margin: 5px 0; /* Adjust the margin to control the spacing around the divider */
+      }
+    </style>
+
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
+    <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg bg-body-tertiary me-4 ms-4">
+    <nav class="navbar navbar-expand-lg p-3">
         <div class="container-fluid">
           <a class="navbar-brand" href="{% url "home" %}">GULF HOUSE</a>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
           </button>
           <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
             <ul class="navbar-nav m-auto mb-2 mb-lg-0">
+
               <li class="nav-item">
                 <a class="nav-link active" aria-current="page" href="{% url "home" %}">Home</a>
               </li>
 
               <div class="dropdown">
-                <s class="dropbtn nav-link">Purchase</s>
+                <p class="dropbtn nav-link">Accounts <i class="fa fa-caret-down" aria-hidden="true"></i></p>
                 <div class="dropdown-content">
                   <a href="{% url "new_purchase_list" %}">Add Purchase Invoice</a>
                   <a href="{% url "purchaselist" %}">Purchase Invoice List</a>
-                  
-                 
+                </div>
+              </div>
+
+              <div class="dropdown">
+                <p class="dropbtn nav-link">Cashbook <i class="fa fa-caret-down" aria-hidden="true"></i></p>
+                <div class="dropdown-content">
+                  <a href="{% url "new_purchase_list" %}">Add Purchase Invoice</a>
+                  <a href="{% url "purchaselist" %}">Purchase Invoice List</a>
+                </div>
+              </div>
+
+              <div class="dropdown">
+                <p class="dropbtn nav-link">Voucher <i class="fa fa-caret-down" aria-hidden="true"></i></p>
+                <div class="dropdown-content">
+                  <a href="{% url "new_purchase_list" %}">Add Purchase Invoice</a>
+                  <a href="{% url "purchaselist" %}">Purchase Invoice List</a>
+                </div>
+              </div>
+           
+              <div class="dropdown">
+                <p class="dropbtn nav-link">Purchase <i class="fa fa-caret-down" aria-hidden="true"></i></p>
+                <div class="dropdown-content">
+                  <a href="{% url "new_purchase_list" %}">Add Purchase Invoice</a>
+                  <a href="{% url "purchaselist" %}">Purchase Invoice List</a>
                 </div>
               </div>
              
               <div class="dropdown">
-                <s class="dropbtn nav-link">Sales</s>
+                <p class="dropbtn nav-link">Sales <i class="fa fa-caret-down" aria-hidden="true"></i></p>
                 <div class="dropdown-content">
                   <a href="{% url "new_ordersheet" %}">New Order Sheet List</a>
                   <a href="#">Order Sheet List</a>
                   <a href="{% url "new_invoice" %}">New Sale Invoice</a>
-                 
                 </div>
               </div>
 
-             
-              
+              <div class="dropdown">
+                <p class="dropbtn nav-link">Inventory <i class="fa fa-caret-down" aria-hidden="true"></i></p>
+                <div class="dropdown-content">
+                  <a href="{% url "create_item" %}">New Item</a>
+                  <a href="{% url "item_list" %}">List Of Item</a>
+                  <div class="divider"></div>
+                  <a href="{% url "create_product" %}">New Product</a>
+                  <a href="{% url "product_list" %}">List Of Products</a>
+                  <div class="divider"></div>
+                  <li class="dropdown-submenu">
+                    <a class="test" tabindex="-1" href="#">New dropdown <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                      <li><a tabindex="-1" href="#">2nd level dropdown</a></li>
+                      <li><a tabindex="-1" href="#">2nd level dropdown</a></li>
+                      <li class="dropdown-submenu">
+                        <a class="test" href="#">Another dropdown <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                          <li><a href="#">3rd level dropdown</a></li>
+                          <li><a href="#">3rd level dropdown</a></li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                  <a href="{% url "new_invoice" %}">New Inventory</a>
+                  <a href="{% url "new_invoice" %}">Inventory List</a>
+                  <div class="divider"></div>
+                  <a href="{% url "new_invoice" %}">Product Ledger</a>
+                  <a href="{% url "new_invoice" %}">Product Stock</a>
+                  <a href="{% url "new_invoice" %}">Periodical Stock</a>
+                </div>
+              </div>
+
+              <div class="dropdown">
+                <p class="dropbtn nav-link">Deliveries <i class="fa fa-caret-down" aria-hidden="true"></i></p>
+                <div class="dropdown-content">
+                  <a href="{% url "new_ordersheet" %}">New Order Sheet List</a>
+                  <a href="#">Order Sheet List</a>
+                  <a href="{% url "new_invoice" %}">New Sale Invoice</a>
+                </div>
+              </div>
+
+              <div class="dropdown">
+                <p class="dropbtn nav-link">Party <i class="fa fa-caret-down" aria-hidden="true"></i></p>
+                <div class="dropdown-content">
+                  <a href="{% url "create_customer" %}">New Customer</a>
+                  <a href="{% url "customer_list" %}">Customer List</a>
+
+                  <div class="divider"></div>
+
+                  <a href="{% url "create_party" %}">New Vendor</a>
+                  <a href="{% url "party_list" %}">Vendor List</a>
+
+                  <div class="divider"></div>
+
+                  <a href="{% url "create_employee" %}">New Employee</a>
+                  <a href="{% url "employee_list" %}">Employee List</a>
+
+                  <div class="divider"></div>
+
+                  <a href="{% url "new_invoice" %}">New Bank</a>
+                  <a href="{% url "new_invoice" %}">Bank List</a>
+                  
+                </div>
+              </div>
+
             </ul>
+
             <form class="d-flex" role="search">
               <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
               <button class="btn btn-outline-success" type="submit">Search</button>
@@ -57,6 +153,16 @@
       {% block content %}{% endblock  %}
 
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+    <script>
+      $(document).ready(function(){
+        $('.dropdown-submenu a.test').on("click", function(e){
+          $(this).next('ul').toggle();
+          e.stopPropagation();
+          e.preventDefault();
+        });
+      });
+      </script>
     <script src="{% static 'js/style.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
   </body>

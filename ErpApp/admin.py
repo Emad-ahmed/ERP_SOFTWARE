@@ -1,8 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, CustomerList, ActivityLog, Product, ItemName,SetPos,InvoiceProduct,PartyList, SetPosPurchase
+from .models import CustomUser, CustomerList, ActivityLog, Product, ItemName,SetPos,InvoiceProduct,PartyList, SetPosPurchase, Employee, PaymentMethodname, Voucher
 
 from import_export.admin import ImportExportModelAdmin
+
 
 
 admin.site.site_header = 'Gulf House Group'
@@ -82,7 +83,7 @@ class ProductAdmin(ImportExportModelAdmin):
             'fields': ('cogs', 'profit_margin_base_seeling','profit_margin_mrp', 'base_selling_price', 'mrp'),
         }),
         ('Stock Information', {
-            'fields': ('opening_stock',),
+            'fields': ('opening_stock','max_order_quantity','min_order_quantity',),
         }),
         ('Location and Position', {
             'fields': ('inventory_location', 'weight', 'position', 'rack', 'row'),
@@ -139,3 +140,30 @@ class PartyListAdmin(ImportExportModelAdmin):
         super().save_related(request, form, formsets, change)
 
     # Customize other admin options as needed
+
+
+@admin.register(Employee)
+class EmployeeAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'department', 'job', 'hired_date', 'termination_date')
+    search_fields = ('full_name', 'department', 'job', 'national_id', 'mobile_phone')
+    list_filter = ('department', 'job', 'gender')
+    ordering = ('full_name',)
+    list_per_page = 20
+
+
+@admin.register(PaymentMethodname)
+class PaymentMethodnameAdmin(ImportExportModelAdmin):
+    list_display = ('name', 'description', 'info_status')
+    search_fields = ('name', 'description', 'info_status')
+
+
+@admin.register(Voucher)
+class VoucherAdmin(ImportExportModelAdmin):
+    list_display = ('vouchernumber', 'amount', 'payment_status', 'description', 'date')
+    search_fields = ('vouchernumber', 'description', 'date')
+    list_filter = ('payment_status', 'date')
+    date_hierarchy = 'date'
+    ordering = ('-date',)
+
+    # Customize the display of the ForeignKey fields
+    raw_id_fields = ('salepos', 'purchasepos', 'account_info')

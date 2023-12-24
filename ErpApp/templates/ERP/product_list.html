@@ -1,0 +1,197 @@
+<!-- ERP/templates/ERP/customer_list.html -->
+
+{% extends 'ERP/base.html' %}
+
+{% block content %}
+{% load static %}
+
+<style>
+    .tablecontainer{
+        overflow-y:auto !important;
+    }
+</style>
+
+<link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
+<link rel="stylesheet" href="{% static 'css/customer_list.css' %}">
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+
+<h2 class="text-center mt-3 mb-4">Product List</h2>
+<div class="items-per-page w-50 ms-3">
+    <label for="itemsPerPage">Items Per Page:</label>
+    <select id="itemsPerPage" class="form-control">
+        <option value="10" {% if items_per_page == 10 %}selected{% endif %}>10</option>
+        <option value="20" {% if items_per_page == 20 %}selected{% endif %}>20</option>
+        <option value="30" {% if items_per_page == 30 %}selected{% endif %}>30</option>
+        <option value="40" {% if items_per_page == 40 %}selected{% endif %}>40</option>
+        <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
+        <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
+        <option value="200" {% if items_per_page == 200 %}selected{% endif %}>200</option>
+        <option value="300" {% if items_per_page == 300 %}selected{% endif %}>300</option>
+        <option value="400" {% if items_per_page == 300 %}selected{% endif %}>400</option>
+        <option value="500" {% if items_per_page == 500 %}selected{% endif %}>500</option>
+        <option value="1000" {% if items_per_page == 1000 %}selected{% endif %}>1000</option>
+    </select>
+</div>
+<div class="container">
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="searchview d-flex">
+        <input type="text" id="searchInput" class="form-control me-4" placeholder="Search by Item Name">
+    </div>
+
+    <div class="tablecontainer">
+    <table class="table" id="productTable">
+        <!-- Table headers here -->
+        <thead>
+            <tr>
+                <th>Serial Number</th>
+                <th>Item Name</th>
+                <th>Name</th>
+                <th>SKU</th>
+                <th>UOM</th>
+                <th>Vendor</th>
+                <th>Brand</th>
+                <th>Category</th>
+                <th>Sub Category</th>
+                <th>Product Type</th>
+                <th>Variation Name</th>
+                <th>Variation Values</th>
+                <th>Barcode Type</th>
+                <th>Alert Quantity</th>
+                <th>Lead Time</th>
+                <th>Reorder Quantity</th>
+                <th>Reorder Date</th>
+                <th>Expires In</th>
+                <th>Tax</th>
+                <th>Purchase Price</th>
+                <th>Transport Cost</th>
+                <th>Other Cost</th>
+                <th>COGS</th>
+                <th>Profit Margin Base Selling</th>
+                <th>Profit Margin MRP</th>
+                <th>Base Selling Price</th>
+                <th>MRP</th>
+                <th>Opening Stock</th>
+                <th>Inventory Location</th>
+                <th>Weight</th>
+                <th>Position</th>
+                <th>Rack</th>
+                <th>Row</th>
+                <th>Max Order Quantity</th>
+                <th>Min Order Quantity</th>
+                <th>Image</th>
+                <th>Product Description</th>
+                <th>Instruction</th>
+                
+                <th>Selling</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <!-- Display product details -->
+                    <td>{{ product.item.name|title }}</td>
+                    <td>{{ product.name|title }}</td>
+                    <td>{{ product.sku }}</td>
+                    <td>{{ product.uom }}</td>
+                    <td>{{ product.vendor }}</td>
+                    <td>{{ product.brand }}</td>
+                    <td>{{ product.category }}</td>
+                    <td>{{ product.sub_category }}</td>
+                    <td>{{ product.product_type }}</td>
+                    <td>{{ product.variation_name }}</td>
+                    <td>{{ product.variation_values }}</td>
+                    <td>{{ product.barcode_type }}</td>
+                    <td>{{ product.alert_quantity }}</td>
+                    <td>{{ product.lead_time }}</td>
+                    <td>{{ product.reorder_quantity }}</td>
+                    <td>{{ product.reorder_date }}</td>
+                    <td>{{ product.expires_in }}</td>
+                    <td>{{ product.tax }}</td>
+                    <td>{{ product.purchase_price }}</td>
+                    <td>{{ product.transport_cost }}</td>
+                    <td>{{ product.other_cost }}</td>
+                    <td>{{ product.cogs }}</td>
+                    <td>{{ product.profit_margin_base_seeling }}</td>
+                    <td>{{ product.profit_margin_mrp }}</td>
+                    <td>{{ product.base_selling_price }}</td>
+                    <td>{{ product.mrp }}</td>
+                    <td>{{ product.opening_stock }}</td>
+                    <td>{{ product.inventory_location }}</td>
+                    <td>{{ product.weight }}</td>
+                    <td>{{ product.position }}</td>
+                    <td>{{ product.rack }}</td>
+                    <td>{{ product.row }}</td>
+                    <td>{{ product.max_order_quantity }}</td>
+                    <td>{{ product.min_order_quantity }}</td>
+                    <td>{% if product.image %}
+                        <img src="{{ product.image.url }}" alt="">
+                    {% else %}
+                        <!-- Provide a placeholder or alternative content -->
+                        No Image
+                    {% endif %}</td>
+                    <td>{{ product.product_description }}</td>
+                    <td>{{ product.instruction }}</td>
+                   
+                    <td>{{ product.selling }}</td>
+                    <td>
+                        <a class="tableeditbtn" href="{% url 'update_product' product.id %}"><i class="fa fa-pencil-square" aria-hidden="true"></i></a>
+                        <a class="tabledelbtn" href="{% url 'delete_product' product.id %}"><i class="fa fa-trash-o" aria-hidden="true"></i></a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+    <!-- Pagination links -->
+    <div class="pagination">
+        <span class="step-links">
+            {% if products.has_previous %}
+                <a href="?page=1{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}">&laquo; first</a>
+                <a href="?page={{ products.previous_page_number }}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}">previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ products.number }} of {{ products.paginator.num_pages }}.
+            </span>
+
+            {% if products.has_next %}
+                <a href="?page={{ products.next_page_number }}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}">next</a>
+                <a href="?page={{ products.paginator.num_pages }}{% if items_per_page %}&items_per_page={{ items_per_page }}{% endif %}">last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $('#searchInput').on('keyup', function () {
+            const searchTerm = $(this).val().toLowerCase();
+            $('#productTable tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().includes(searchTerm));
+            });
+        });
+
+        // Handle items per page change
+        $('#itemsPerPage').on('change', function () {
+            const selectedValue = $(this).val();
+            window.location.href = `?page=1&items_per_page=${selectedValue}`;
+        });
+    });
+</script>
+
+
+
+{% endblock %}

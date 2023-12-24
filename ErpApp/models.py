@@ -142,7 +142,8 @@ class Product(models.Model):
     position = models.IntegerField(default=0, null=True, blank=True)
     rack = models.IntegerField(default=0,null=True, blank=True)
     row = models.IntegerField(default=0,null=True, blank=True)
-
+    max_order_quantity = models.FloatField(default=0,null=True, blank=True)
+    min_order_quantity = models.FloatField(default=0,null=True, blank=True)
     # Additional Information
     image = models.ImageField(upload_to='product_images/', null=True, blank=True)
     product_description = models.TextField(null=True, blank=True)
@@ -192,7 +193,7 @@ class InvoiceProduct(models.Model):
     name = models.CharField(max_length=255)
     item_name = models.CharField(max_length=255)
     sku = models.IntegerField()
-    quantity = models.IntegerField()
+    quantity = models.FloatField()
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
     unit = models.CharField(max_length=100, default="kg")
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
@@ -206,10 +207,15 @@ class SetPos(models.Model):
     total_subtotal = models.DecimalField(max_digits=10, decimal_places=2)
     total_with_discount = models.DecimalField(max_digits=10, decimal_places=2)
     products = models.ManyToManyField(InvoiceProduct)
+    paid_amount = models.FloatField(default =0, null=True, blank=True)
+    due_amount = models.FloatField(default=0,)
     status = models.CharField(max_length=100)
+    order_sheet = models.CharField(max_length=100, default="order", null=True, blank= True)
     invoice_date = models.DateTimeField(auto_now_add=True)
     delivery_date = models.DateTimeField(auto_now_add=True)
+    delivery_status = models.CharField(max_length=100, default="incomplete", null=True, blank= True)
     invoice_by = models.CharField(max_length=100)
+    systemname = models.CharField(max_length=100,null=True, blank=True)
 
     def __str__(self) -> str:
         return self.customer.Debtors_Name
@@ -262,7 +268,7 @@ class SetPosPurchase(models.Model):
     delivery_status = models.CharField(
         max_length=100,
         choices=DELIVERY_STATUS_CHOICES,
-        default='pending',  
+        default='Pending',  
         null=True,
         blank=True
     )
@@ -277,4 +283,72 @@ class SetPosPurchase(models.Model):
     approved_by = models.CharField(max_length=100, default="Hussain", null=True, blank=True)
 
     def __str__(self) -> str:
-        return self.party.Party_Name
+        return f"{self.id}-{self.party.Party_Name}"
+    
+
+class Employee(models.Model):
+    full_name = models.CharField(max_length=255)
+    department = models.CharField(max_length=255)
+    job = models.CharField(max_length=255)
+    address = models.TextField()
+    city = models.CharField(max_length=255)
+    state = models.CharField(max_length=255)
+    postal_code = models.CharField(max_length=20)
+    birthday = models.DateField()
+    gender = models.CharField(max_length=10)
+    national_id = models.CharField(max_length=255)
+    hired_date = models.DateField()
+    card_number = models.CharField(max_length=255)
+    mobile_phone = models.CharField(max_length=20)
+    termination_date = models.DateField(null=True, blank=True)
+    
+    def __str__(self):
+        return self.full_name
+    
+
+
+class PaymentMethodname(models.Model):
+    PAYMENY_METHOD = [
+        ('DEBIT', 'DEBIT'),
+        ('CREDIT', 'CREDIT'),
+        # Add more choices as needed
+    ]
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    info_status = models.CharField(
+        max_length=100,
+        choices= PAYMENY_METHOD,
+        default='Cash',  
+        null=True,
+        blank=True
+    )
+
+
+class Voucher(models.Model):
+    PAYMENT_METHOD = [
+        ('CASH', 'CASH'),
+        ('CHEQUE', 'CHEQUE'),
+        ('Bank Deposit', 'Bank Deposit'),
+        ('Card', 'Card'),
+        ('Bkash', 'Bkash'),
+        # Add more choices as needed
+    ]
+
+    vouchernumber = models.IntegerField(default=0)
+    amount = models.FloatField()
+    payment_status = models.CharField(
+        max_length=100,
+        choices=PAYMENT_METHOD,
+        default='Cash',
+        null=True,
+        blank=True
+    )
+    description = models.TextField()
+    salepos = models.ForeignKey(SetPos, on_delete=models.CASCADE, null=True, blank=True)
+    purchasepos = models.ForeignKey(SetPosPurchase, on_delete=models.CASCADE, null=True, blank=True)
+    account_info = models.ForeignKey(PaymentMethodname, on_delete=models.CASCADE)
+    date = models.DateTimeField(default=timezone.now)  # Use DateTimeField
+
+    def __str__(self):
+        return f"Voucher {self.vouchernumber}"
+    

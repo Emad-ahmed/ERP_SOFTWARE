@@ -1,0 +1,35 @@
+{% extends 'ERP/base.html' %}
+
+{% block content %}
+
+{% load static %}
+
+
+<link rel="stylesheet" href="{% static 'css/customer_list_form.css' %}">
+<link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
+
+
+  {% if employee.id %}
+    <h4 class="text-center mt-3 mb-4">Update Employee</h4>
+  {% else %}
+  <h4 class="text-center mt-3 mb-4">Create Employee</h4>
+  {% endif %}
+  
+<div class="container">
+
+  <form method="post" action="{% if employee.id %}{% url 'update_employee' employee.id %}{% else %}{% url 'create_employee' %}{% endif %}">
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    {% if employee.id %}
+
+    <button class="btn btn-info" type="submit">Update</button>
+    {% else %}
+    <button type="submit" class="btn btn-success">Save</button>
+    {% endif %}
+  </form>
+
+</div>
+
+{% endblock %}

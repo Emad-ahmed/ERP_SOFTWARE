@@ -35,7 +35,7 @@
 <p id="myTime" class="mytime mt-3"></p>
 
 <div class="mytransaction mb-5">
-    <a href="{% url "transaction" %}" class="transaction">All Purchase</a>
+    <a href="{% url "purchaselist" %}" class="transaction">All Purchase</a>
 </div>
 
 <div class="customer-details" id="customerDetails">
@@ -68,6 +68,7 @@
             <th>SKU</th>
             <th>Unit Cost</th>
             <th>Unit</th>
+            <th>Purchase Price</th>
             <th>Quantity</th> 
             <th class="subtotal-cell">Subtotal</th> 
             <th>Action</th>
@@ -214,15 +215,45 @@
                     const cell = row.insertCell();
                     const input = document.createElement('input');
                     input.classList.add('editable-input');
-                    input.setAttribute('type', 'text'); // You may want to use 'text' or 'number' based on your data type
+    
+                    // Get the index of the current cell
+                    const columnIndex = row.cells.length - 1;
+    
+                    // Set the type attribute based on the column index
+                    if (columnIndex === 4) {
+                        input.setAttribute('type', 'number');
+                        input.setAttribute('step', '0.01'); // Set step attribute for decimal values if needed
+                    } else if (columnIndex === 6) {
+                        input.setAttribute('type', 'password');
+                        input.setAttribute('step', '0.01'); // Set step attribute for decimal values if needed
+                    } else {
+                        input.setAttribute('type', 'text');
+                    }
+    
                     cell.appendChild(input);
-        
+    
                     // Populate input value based on details
                     input.value = details[key];
-        
+    
                     // Set up event listener for changes in inputs
                     input.addEventListener('input', function () {
                         // Your logic to handle input changes
+    
+                        // Log the values of column index 4 and column index 6
+                        if (columnIndex === 4 || columnIndex === 6) {
+                            const unitCost = parseFloat(row.cells[4].querySelector('.editable-input').value) || 0;
+                            const quantity = parseFloat(row.cells[6].querySelector('.editable-input').value) || 0;
+    
+                            if(unitCost < quantity)
+                            {
+                              
+                                console.log("Price Less Than Purchase Price");
+                                document.getElementById("errorshow").innerHTML = "Price Less Than Purchase Price";
+                            } else{
+                                document.getElementById("errorshow").innerHTML = "";
+    
+                            }
+                        }
                     });
                 }
             }
