@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\user\Pictures\Gulf Software\ERP\venv"
+VIRTUAL_ENV="C:\Users\user\Pictures\Gulf Software\ERP Jawhar\venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

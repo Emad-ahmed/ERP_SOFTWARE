@@ -48,7 +48,6 @@
     <thead>
         <tr>
             <th>Serial Number</th>
-            <th>Item</th>
             <th>Name</th>
             <th>SKU</th>
             <th>Unit Cost</th>
@@ -132,7 +131,7 @@
         return `
             <tr>
                 <td>${index}</td>
-                <td><input type="text" value="${rowData.item_name !== undefined ? rowData.item_name : ''}"></td>
+                
                 <td><input type="text" value="${rowData.name !== undefined ? rowData.name : ''}"></td>
                 <td><input type="text" value="${rowData.sku !== undefined ? rowData.sku : ''}"></td>
                 <td><input type="number" value="${rowData.unitCost !== undefined ? rowData.unitCost : ''}" class="unitCostInput"></td>
@@ -247,9 +246,9 @@
            
             let unitCost = product.mrp;
             let unit = product.uom;
-            let item_name = product.item__name;
+           
             let quantity = 1;
-            const newRow = createRowHTML({ ...product,item_name, unitCost, unit, quantity}, productTableContainer.childElementCount + 1);
+            const newRow = createRowHTML({ ...product, unitCost, unit, quantity}, productTableContainer.childElementCount + 1);
             productTableContainer.insertAdjacentHTML('beforeend', newRow);
         }
     }
@@ -354,18 +353,18 @@
         for (let i = 0; i < tableRows.length; i++) {
             const row = tableRows[i];
             // No need to assign a product ID, let the backend handle it
-            const itemName = row.cells[1].querySelector('input').value;
-            const Name = row.cells[2].querySelector('input').value;
-            const Sku = row.cells[3].querySelector('input').value;
-            const quantity = parseFloat(row.cells[6].querySelector('input').value) || 0;
-            const unitCost = parseFloat(row.cells[4].querySelector('input').value) || 0;
-            const unit = row.cells[5].querySelector('input').value;
-            const subtotal = parseFloat(row.cells[7].querySelector('input').value) || 0;
+
+            const Name = row.cells[1].querySelector('input').value;
+            const Sku = row.cells[2].querySelector('input').value;
+            const quantity = parseFloat(row.cells[5].querySelector('input').value) || 0;
+            const unitCost = parseFloat(row.cells[3].querySelector('input').value) || 0;
+            const unit = row.cells[4].querySelector('input').value;
+            const subtotal = parseFloat(row.cells[6].querySelector('input').value) || 0;
     
             // Create an object with product details
             const productDetails = {
                 name: Name,
-                item_name: itemName,
+        
                 sku: Sku,
                 unit: unit,
                 quantity: quantity,

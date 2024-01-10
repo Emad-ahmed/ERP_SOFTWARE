@@ -2,6 +2,7 @@
 
 {% extends 'ERP/base.html' %}
 
+
 {% block content %}
 {% load static %}
 
@@ -14,6 +15,7 @@
 <link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
 <link rel="stylesheet" href="{% static 'css/customer_list.css' %}">
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
 
 
 <h2 class="text-center mt-3 mb-4">Product List</h2>
@@ -54,7 +56,6 @@
         <thead>
             <tr>
                 <th>Serial Number</th>
-                <th>Item Name</th>
                 <th>Name</th>
                 <th>SKU</th>
                 <th>UOM</th>
@@ -91,7 +92,7 @@
                 <th>Image</th>
                 <th>Product Description</th>
                 <th>Instruction</th>
-                
+                {% comment %} <th>Generate Barcode</th> {% endcomment %}
                 <th>Selling</th>
                 <th>Actions</th>
             </tr>
@@ -101,7 +102,7 @@
                 <tr>
                     <td>{{ forloop.counter }}</td>
                     <!-- Display product details -->
-                    <td>{{ product.item.name|title }}</td>
+                   
                     <td>{{ product.name|title }}</td>
                     <td>{{ product.sku }}</td>
                     <td>{{ product.uom }}</td>
@@ -143,7 +144,12 @@
                     {% endif %}</td>
                     <td>{{ product.product_description }}</td>
                     <td>{{ product.instruction }}</td>
-                   
+                  
+                    {% comment %} <td>
+                        <a class="generate-barcode-btn btn btn-primary" href="{% url 'generate_barcode' product.id %}" target="_blank">
+                            Barcode
+                        </a>
+                    </td> {% endcomment %}
                     <td>{{ product.selling }}</td>
                     <td>
                         <a class="tableeditbtn" href="{% url 'update_product' product.id %}"><i class="fa fa-pencil-square" aria-hidden="true"></i></a>
@@ -175,6 +181,7 @@
     </div>
 </div>
 
+
 <script>
     $(document).ready(function () {
         $('#searchInput').on('keyup', function () {
@@ -191,6 +198,10 @@
         });
     });
 </script>
+
+<!-- Add this script before your custom script -->
+
+
 
 
 

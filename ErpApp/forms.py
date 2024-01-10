@@ -1,7 +1,7 @@
 # forms.py
 
 from django import forms
-from .models import CustomerList, PartyList, ItemName, Product, Employee
+from .models import CustomerList, PartyList,  Product, Employee, Voucher
 
 class CustomerListForm(forms.ModelForm):
     class Meta:
@@ -49,17 +49,13 @@ class PartyListForm(forms.ModelForm):
         }
 
 
-class ItemNameForm(forms.ModelForm):
-    class Meta:
-        model = ItemName
-        fields = ['name']
+
 
 
 class ProductUpdateForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = [
-            'item',
             'name',
             'sku',
             'uom',
@@ -105,7 +101,7 @@ class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = [
-            'item',
+        
             'name',
 
             'uom',
@@ -157,3 +153,18 @@ class EmployeeForm(forms.ModelForm):
                 'hired_date': forms.DateInput(attrs={'type': 'date'}),
                 'termination_date': forms.DateInput(attrs={'type': 'date'}),
         }
+
+class VoucherForm(forms.ModelForm):
+    class Meta:
+        model = Voucher
+        exclude = ['vouchernumber', 'date']
+        widgets = {
+            'date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Add 'form-control' class to all form fields
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'

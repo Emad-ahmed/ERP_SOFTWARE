@@ -389,3 +389,17 @@ a#CashLink{
     color: #9c2a2a !important;
     border: 1px solid #9c2a2a !important;
 }
+
+#exampleModal3 .modal-body form{
+    width: 50%;
+    margin: auto;
+}
+
+#exampleModal3 .modal-body form input, textarea{
+    display: block !important;
+    width: 95% !important;
+    border-radius: 0.4rem;
+    padding: 0.4rem;
+    border: 1px solid green;
+    margin-bottom: 0.6rem;
+}

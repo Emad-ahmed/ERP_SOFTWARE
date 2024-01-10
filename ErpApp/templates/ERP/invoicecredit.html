@@ -46,27 +46,24 @@
             display: flex;
             justify-content: space-between;
         }
+
+
+
+
     </style>
 </head>
 <body>
     
     <div class="maintextarabic">
         <div>
-            <h1>GULF HOUSE FACTORY</h1>
-            <p class="spanmt1">TRADING HOUSE & FACTORY FOR SHUTTER AND ALL OF ITS ACCESSORIES</p>
-            <p class="spanmt1">Al Rai - Block 3 - Mohhammed Ibrahim Street (32)</p>
-            <p class="spanmt1">Behind All Baghli Sponge-  Building No 287 Shop No 1</p>
-            <p>TEL: 99255662 - 99223382 - 99553695 - 65623878</p>
+            
         </div>
-        
     </div>
 
     <div>
         <h1 class="mainstatus">{{ status }}</h1>
     </div>
 
-
-        
     <table>
         <tr>
             <td style="padding-left:5px;">
@@ -81,7 +78,7 @@
             </td>
         </tr>
     </table>
-
+    
     <table>
         <tr>
             <td style="padding-top:4px;">Pay Method {{ status }}</td>
@@ -93,7 +90,7 @@
             <thead>
                 <tr>
                     <th style="text-align:center; padding:5px">Serial</th>
-                    <th style="text-align:center; padding:5px">Item</th>
+               
                     <th style="text-align:center; padding:5px">Product Name</th>
                     <th style="text-align:center; padding:5px">Unit</th>
                     <th style="text-align:center; padding:5px">Quantity</th>
@@ -105,7 +102,6 @@
                 {% for product in products %}
                     <tr>
                         <td style="text-align:center; padding:5px">{{ forloop.counter }}</td>
-                        <td style="text-align:center; padding:5px">{{ product.item_name }}</td>
                         <td style="text-align:center; padding:5px">{{ product.name }}</td>
                         <td style="text-align:center; padding:5px">{{ product.unit }}</td>
                         <td style="text-align:center; padding:5px">{{ product.quantity }}</td>
@@ -125,5 +121,15 @@
         {% endif %}
         <p>Status: {{ status }}</p>
     </div>
+
+
+    <div style="margin-top:10pt">
+        <p>All product returns must be made within 15 days of purchase.</p>
+        <p>Delivery and handling fees are non-refundable.</p>
+        <p>Custom-made or personalized products are not eligible for return.</p>
+        <p>Products that have been used or damaged are not eligible for return.</p>
+        <p>Products must be returned in their original packaging</p>
+    </div>
+
 </body>
 </html>

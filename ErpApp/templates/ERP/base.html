@@ -37,24 +37,34 @@
               <div class="dropdown">
                 <p class="dropbtn nav-link">Accounts <i class="fa fa-caret-down" aria-hidden="true"></i></p>
                 <div class="dropdown-content">
-                  <a href="{% url "new_purchase_list" %}">Add Purchase Invoice</a>
-                  <a href="{% url "purchaselist" %}">Purchase Invoice List</a>
+                  <a href="{% url "new_purchase_list" %}">Ledger Books</a>
+                  <a href="{% url "purchaselist" %}">Cash and Cash Equivalents</a>
+                  <div class="divider"></div>
+                  <a href="{% url "new_purchase_list" %}">Journal</a>
+                  <a href="{% url "purchaselist" %}">Bank Reconciliation</a>
+                  <div class="divider"></div>
+                  <a href="{% url "new_purchase_list" %}">Balance Sheet</a>
+                  <a href="{% url "purchaselist" %}">General Ledger</a>
                 </div>
               </div>
 
               <div class="dropdown">
                 <p class="dropbtn nav-link">Cashbook <i class="fa fa-caret-down" aria-hidden="true"></i></p>
                 <div class="dropdown-content">
-                  <a href="{% url "new_purchase_list" %}">Add Purchase Invoice</a>
-                  <a href="{% url "purchaselist" %}">Purchase Invoice List</a>
+                  <a href="{% url "new_purchase_list" %}">Cashbook</a>
+                  <a href="{% url "purchaselist" %}">Cashbook Home</a>
                 </div>
               </div>
 
               <div class="dropdown">
                 <p class="dropbtn nav-link">Voucher <i class="fa fa-caret-down" aria-hidden="true"></i></p>
                 <div class="dropdown-content">
-                  <a href="{% url "new_purchase_list" %}">Add Purchase Invoice</a>
-                  <a href="{% url "purchaselist" %}">Purchase Invoice List</a>
+                  <a href="{% url "voucher_list" %}">Voucher List</a>
+                  <a href="{% url "purchaselist" %}">Payment</a>
+                  <a href="{% url "purchaselist" %}">Receipt</a>
+                  <a href="{% url "purchaselist" %}">Expense</a>
+                  <a href="{% url "purchaselist" %}">Contra</a>
+                  <a href="{% url "purchaselist" %}">Journal Voucher</a>
                 </div>
               </div>
            
@@ -63,23 +73,27 @@
                 <div class="dropdown-content">
                   <a href="{% url "new_purchase_list" %}">Add Purchase Invoice</a>
                   <a href="{% url "purchaselist" %}">Purchase Invoice List</a>
+                  <div class="divider"></div>
+                  <a href="{% url "new_purchase_list" %}">New Purchase Cancellation</a>
+                  <a href="{% url "purchaselist" %}">Purchase Cancellation List</a>
                 </div>
               </div>
              
               <div class="dropdown">
                 <p class="dropbtn nav-link">Sales <i class="fa fa-caret-down" aria-hidden="true"></i></p>
                 <div class="dropdown-content">
-                  <a href="{% url "new_ordersheet" %}">New Order Sheet List</a>
-                  <a href="#">Order Sheet List</a>
+                 
                   <a href="{% url "new_invoice" %}">New Sale Invoice</a>
+                  <a href="{% url "transaction" %}">Sale Invoice List</a>
+                  <div class="divider"></div>
+                  <a href="{% url "cancel_transaction" %}">New Sale Cancellation</a>
                 </div>
               </div>
 
               <div class="dropdown">
                 <p class="dropbtn nav-link">Inventory <i class="fa fa-caret-down" aria-hidden="true"></i></p>
                 <div class="dropdown-content">
-                  <a href="{% url "create_item" %}">New Item</a>
-                  <a href="{% url "item_list" %}">List Of Item</a>
+             
                   <div class="divider"></div>
                   <a href="{% url "create_product" %}">New Product</a>
                   <a href="{% url "product_list" %}">List Of Products</a>
@@ -117,7 +131,7 @@
               </div>
 
               <div class="dropdown">
-                <p class="dropbtn nav-link">Party <i class="fa fa-caret-down" aria-hidden="true"></i></p>
+                <p class="dropbtn nav-link">Parties <i class="fa fa-caret-down" aria-hidden="true"></i></p>
                 <div class="dropdown-content">
                   <a href="{% url "create_customer" %}">New Customer</a>
                   <a href="{% url "customer_list" %}">Customer List</a>
@@ -165,5 +179,6 @@
       </script>
     <script src="{% static 'js/style.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    
   </body>
 </html>

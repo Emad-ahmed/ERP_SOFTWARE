@@ -19,6 +19,35 @@
 
 <link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
 
+<div class="modal fade" id="exampleModal3" tabindex="-1" aria-labelledby="exampleModalLabel3" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="exampleModalLabel3">Product</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <form method="post" action="{% url 'new_invoice' %}">
+                {% csrf_token %}
+                {{ customerform.as_p }}
+                <button type="submit" class="btn btn-success mt-3">Save</button>
+              </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
 
 <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -42,11 +71,12 @@
 </div>
 
 <div class="customer-details" id="customerDetails">
-    <!-- Customer details will be displayed here -->
+    
 </div>
 
 
 <div class="search-container">
+    <a href="" type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#exampleModal3">Add Customer</a>
     <input class="search-input" id="customerSearch" type="text" placeholder="Search for customers">
     <div class="search-list" id="customerList">
         <!-- Customer list items will be populated here -->
@@ -56,6 +86,7 @@
 
 
 <div class="search-container">
+    <a href="{% url "create_product" %}" class="btn btn-primary mb-3" >Add Product</a>
     <input class="search-input" id="productSearch" type="text" placeholder="Search for products">
     <div class="search-list" id="productList">
         <!-- Product list items will be populated here -->
@@ -70,7 +101,6 @@
     <thead>
         <tr>
             <th>Prouduct ID</th>
-            <th>Item</th>
             <th>Name</th>
             <th>SKU</th>
             <th>Unit Cost</th>
@@ -96,7 +126,6 @@
     <p>Total Subtotal: <span id="totalSubtotal">0.00</span></p>
     <p>Total Quantity: <span id="totalQuantity">0</span></p>
     <p>Total with Discount: <span id="totalWithDiscount">0.00</span></p> <!-- Add this line -->
-
 </div>
 
 <div>
@@ -227,10 +256,14 @@
                     const columnIndex = row.cells.length - 1;
             
                     // Set the type attribute based on the column index
-                    if (columnIndex === 4) {
+                    if (columnIndex === 2) {
+                        input.setAttribute('type', 'text');
+                        input.setAttribute('step', '1'); // Set step attribute for decimal values if needed
+                    } 
+                    else if (columnIndex === 3) {
                         input.setAttribute('type', 'number');
                         input.setAttribute('step', '0.01'); // Set step attribute for decimal values if needed
-                    } else if (columnIndex === 6) {
+                    } else if (columnIndex === 5) {
                         input.setAttribute('type', 'password');
                         input.setAttribute('step', '0.01'); // Set step attribute for decimal values if needed
                     } else {
@@ -247,9 +280,9 @@
                         // Your logic to handle input changes
             
                         // Log the values of column index 4 and column index 6
-                        if (columnIndex === 4 || columnIndex === 6) {
-                            const unitCost = parseFloat(row.cells[4].querySelector('.editable-input').value) || 0;
-                            const quantity = parseFloat(row.cells[6].querySelector('.editable-input').value) || 0;
+                        if (columnIndex === 3 || columnIndex === 5) {
+                            const unitCost = parseFloat(row.cells[3].querySelector('.editable-input').value) || 0;
+                            const quantity = parseFloat(row.cells[5].querySelector('.editable-input').value) || 0;
                             const productName = details.name; // Assuming the product name is stored in the 'name' property
             
                             if (unitCost < quantity) {
@@ -302,7 +335,7 @@
             productIdsArray.push(productId);
         
             quantityInput.addEventListener('input', function () {
-                const mrp = parseFloat(row.cells[4].querySelector('.editable-input').value);
+                const mrp = parseFloat(row.cells[3].querySelector('.editable-input').value);
                 const quantity = parseFloat(quantityInput.value) || 0;
         
                 const subtotal = mrp * quantity;
@@ -438,18 +471,17 @@
         for (let i = 0; i < tableRows.length; i++) {
             const row = tableRows[i];
             // No need to assign a product ID, let the backend handle it
-            const itemName = row.cells[1].querySelector('.editable-input').value;
-            const Name = row.cells[2].querySelector('.editable-input').value;
-            const Sku = row.cells[3].querySelector('.editable-input').value;
-            const quantity = parseFloat(row.cells[7].querySelector('.quantity-input').value) || 0;
-            const unitCost = parseFloat(row.cells[4].querySelector('.editable-input').value) || 0;
-            const unit = row.cells[5].querySelector('.editable-input').value;
-            const subtotal = parseFloat(row.cells[8].querySelector('.subtotal-input').value) || 0;
+        
+            const Name = row.cells[1].querySelector('.editable-input').value;
+            const Sku = row.cells[2].querySelector('.editable-input').value;
+            const quantity = parseFloat(row.cells[6].querySelector('.quantity-input').value) || 0;
+            const unitCost = parseFloat(row.cells[3].querySelector('.editable-input').value) || 0;
+            const unit = row.cells[4].querySelector('.editable-input').value;
+            const subtotal = parseFloat(row.cells[7].querySelector('.subtotal-input').value) || 0;
     
             // Create an object with product details
             const productDetails = {
                 name: Name,
-                item_name:itemName,
                 sku:Sku,
                 unit:unit,
                 quantity: quantity,

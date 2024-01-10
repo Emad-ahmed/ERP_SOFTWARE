@@ -19,6 +19,10 @@
         width:30%;
         margin-left: 5%;
     }
+    .debotsname
+    {
+        color:black !important;
+    }
 </style>
 
 {% load static %}
@@ -26,6 +30,8 @@
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
 <link rel="stylesheet" href="https://cdnjs.cloudfla xre.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<h1 class="text-center mt-3 mb-3">Sale Invoice</h1>
 
 <div class="items-per-page w-25">
     <label for="itemsPerPage">Items per page:</label>
@@ -45,6 +51,102 @@
 <input type="text" id="searchInput" class="form-control" placeholder="Search by Customer Name">
 </div>
 
+<div class="modal fade" id="exampleModal6" tabindex="-1" aria-labelledby="exampleModalLabel6" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="exampleModalLabel6">Show All Product</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<!-- Add this somewhere in your HTML, usually at the end of your file -->
+<div class="modal fade" id="voucherModal" tabindex="-1" role="dialog" aria-labelledby="voucherModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="voucherModalLabel">Voucher Information</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Content of your modal goes here -->
+                <form id="voucherForm" method="post" action="" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    <!-- Voucher Number -->
+                    {% comment %} <div class="form-group">
+                        <label for="{{ form.vouchernumber.id_for_label }}">Voucher Number:</label>
+                        {{ form.vouchernumber }}
+                    </div> {% endcomment %}
+                
+                    <!-- Amount -->
+                    <!-- Salepos -->
+                    <div class="form-group">
+                        <label for="{{ form.salepos.id_for_label }}">Sale POS:</label>
+                        {{ form.salepos }}
+                    </div>
+                
+                    <div class="form-group">
+                        <label for="{{ form.amount.id_for_label }}">Amount:</label>
+                        {{ form.amount }}
+                    </div>
+                
+                    <!-- Payment Status -->
+                    <div class="form-group">
+                        <label for="{{ form.payment_status.id_for_label }}">Payment Status:</label>
+                        {{ form.payment_status }}
+                    </div>
+                
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="{{ form.description.id_for_label }}">Description:</label>
+                        {{ form.description }}
+                    </div>
+                
+                    
+                    <!-- Purchasepos -->
+                    <div class="form-group">
+                        <label for="{{ form.purchasepos.id_for_label }}">Type:</label>
+                        {{ form.type }}
+                    </div>
+                
+                    <!-- Account Info -->
+                    <div class="form-group">
+                        <label for="{{ form.account_info.id_for_label }}">Account Info:</label>
+                        {{ form.account_info }}
+                    </div>
+                
+                    <!-- Date -->
+                    {% comment %} <div class="form-group">
+                        <label for="{{ form.date.id_for_label }}">Date:</label>
+                        {{ form.date }}
+                    </div> {% endcomment %}
+                
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <!-- Add any other buttons you need in the footer -->
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
 <div class="allbutton">
     <a href="?status=draft" id="draftLink" class="btn {% if status_filter == 'draft' %}active{% endif %}">Draft</a>
     <a href="?status=quatation" id="QuatationLink" class="btn {% if status_filter == 'quatation' %}active{% endif %}">Quotation</a>
@@ -53,11 +155,19 @@
 </div>
 
 <!-- Your home page content goes here -->
+<div class="dropdown columnvisibilty">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="toggleColumnsDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Column Visibility
+    </button>
+    <div class="dropdown-menu" aria-labelledby="toggleColumnsDropdown" id="toggleColumnsDropdownMenu">
+        <!-- Options will be dynamically added here -->
+    </div>
+</div>
 
 <table class="pos-table">
     <thead>
         <tr>
-            <th class="posid">POS ID</th>
+            <th class="posid">SO ID</th>
             <th class="productid">ID</th>
             <th>Customer</th>
             <th>Total with Discount</th>
@@ -69,9 +179,12 @@
             <th>Status</th>
             <th>Invoice Date</th>
             <th>Invoice By</th>
+            <th>Paid Or Due</th>
             <th>Edit</th>
             <th>Voucher</th>
             <th>Action</th>
+            <th>Return</th>
+            <th>View</th>
         </tr>
     </thead>
     <tbody>
@@ -79,7 +192,7 @@
         <tr>
             <td class="posid">{{ pos.id }}</td>
             <td class="productid">{{ pos.customer.id }}</td>
-            <td>{{ pos.customer.Debtors_Name }}</td>
+            <td><a href="{% url 'customerDetailsaccount' pos.customer.id %}" class="debotsname">{{ pos.customer.Debtors_Name }}</a></td>            
             <td>{{ pos.total_with_discount }}</td>
             <td>{{ pos.discount }}</td>
             <td>{{ pos.total_subtotal }}</td>
@@ -102,10 +215,9 @@
                     <tbody>
                         {% for product in pos.products.all %}
                         <tr>
-                            <td><input type="text" class="item-input" value="{{ product.item_name }}"></td>
                             <td><input type="text" class="name-input" value="{{ product.name }}"></td>
                             <td><input type="text" class="unit-input" value="{{ product.unit }}"></td>
-                            <td><input type="number" class="sku-input" value="{{ product.sku }}"></td>
+                            <td><input type="text" class="sku-input" value="{{ product.sku }}"></td>
                             <td><input type="number" class="quantity-input" value="{{ product.quantity }}"></td>
                             <td><input type="number" class="unit-cost-input" value="{{ product.unit_cost }}"></td>
                             <td><input type="number" class="subtotal-input" value="{{ product.subtotal }}"></td>
@@ -117,16 +229,40 @@
             <td>{{ pos.status }}</td>
             <td>{{ pos.invoice_date }}</td>
             <td>{{ pos.invoice_by }}</td>
+            <td>
+                {% if pos.paid_amount == pos.total_with_discount %}
+                    Paid
+                {% else %}
+                    Due
+                {% endif %}
+            </td>
             <td class="d-flex">
                 <button class="editButton btn btn-info" data-target="{{ forloop.counter }}">Edit</button>
             </td>
             
-            <td><a href="" class="btn btn-success">Voucher</a></td>
-            <td><button class="deleteButton btn btn-danger" data-target="{{ forloop.counter }}">Delete</button></td>
-            
+            <td>
+                <button class="voucherButton btn btn-success" data-toggle="modal" data-target="#voucherModal" data-posid="{{ pos.id }}">Voucher</button>
+            </td>
+            <td><button class="deleteButton btn btn-danger" data-target="{{ pos.id }}"><i class="fa fa-trash-o" aria-hidden="true"></i></button></td>
+            <td class="d-flex">
+                <button class="returnButton btn btn-warning" data-target="{{ forloop.counter }}">Return</button>
+            </td>
+            <td><button type="button" class="btn btn-primary viewButton" data-bs-toggle="modal" data-bs-target="#exampleModal6" data-rowid="{{ forloop.counter }}">View</button>
+
+            </td>
         </tr>
         {% endfor %}
     </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="1"></td><!-- colspan should be adjusted based on the number of columns in your table -->
+            <td><p class="totalAmount fw-bolder"></p></td>
+            <td colspan="1"></td>
+            <td><p class="totalSubtotal fw-bolder"></p></td>
+            <td><p class="totalpaidAmount fw-bolder"></p></td>
+        </tr>
+        
+    </tfoot>
 </table>
 
 <div class="pagination">
@@ -222,10 +358,9 @@
 
         function getRowData(row) {
             return {
-                item_name: getValue(row, '.item-input'),
                 name: getValue(row, '.name-input'),
                 unit: getValue(row, '.unit-input'),
-                sku: parseFloat(getValue(row, '.sku-input')) || 0,
+                sku: getValue(row, '.sku-input') ,
                 quantity: parseFloat(getValue(row, '.quantity-input')) || 0,
                 unitCost: parseFloat(getValue(row, '.unit-cost-input')) || 0,
                 subtotal: parseFloat(getValue(row, '.subtotal-input')) || 0
@@ -243,16 +378,18 @@
             const discountValue = allRowsData[0].discount;
             const totalSubtotal = allRowsData[0].totalSubtotal;
             const totalWithDiscount = allRowsData[0].totalWithDiscount;
-
+            
             const productsArray = allRowsData.slice(1).map(row => ({
                 name: row.name,
-                item_name: row.item_name,
                 unit: row.unit,
                 sku: row.sku,
                 quantity: row.quantity,
                 unit_cost: row.unitCost,
                 subtotal: row.subtotal
             }));
+            
+
+            
 
             const requestData = {
                 customerId: customerId,  // Include customer ID directly
@@ -333,6 +470,56 @@
             });
         });
 
+
+        document.querySelectorAll('.returnButton').forEach(button => {
+            button.addEventListener('click', function () {
+                // Extract data from the clicked row
+                const clickedRowIndex = parseInt(this.getAttribute('data-target')) - 1;
+                const clickedRow = innertables[clickedRowIndex];
+                const outerTableRow = clickedRow.closest('tr');
+                const clickedRowData = {
+                    posid: outerTableRow.querySelector('td:nth-child(1)').textContent.trim(),
+                    customerid: outerTableRow.querySelector('td:nth-child(2)').textContent.trim(),
+                    totalWithDiscount: outerTableRow.querySelector('td:nth-child(4)').textContent.trim(),
+                    discount: outerTableRow.querySelector('td:nth-child(5)').textContent.trim(),
+                    totalSubtotal: outerTableRow.querySelector('td:nth-child(6)').textContent.trim(),
+                    status: outerTableRow.querySelector('td:nth-child(8)').textContent.trim(),
+                    invoiceBy: outerTableRow.querySelector('td:nth-child(10)').textContent.trim(),
+                };
+
+                // Prepare an array with the clicked row data
+                const allRowsData = [clickedRowData];
+                // Check if the row already exists in the array
+                const rowAlreadyExists = doesRowExist(allRowsData, clickedRow);
+                // If the row doesn't exist, add it to the array
+                if (!rowAlreadyExists) {
+                    const rowObj = getRowData(clickedRow);
+                    if (rowObj.name !== null) {
+                        allRowsData.push(rowObj);
+                    }
+                }
+
+                // Process inner table rows
+                const innerTableRows = clickedRow ? clickedRow.querySelectorAll('tbody tr') : [];
+                innerTableRows.forEach(innerRow => {
+                    const innerRowAlreadyExists = doesRowExist(allRowsData, innerRow);
+                    if (!innerRowAlreadyExists) {
+                        const innerRowObj = getRowData(innerRow);
+                        if (innerRowObj.name !== null) {
+                            allRowsData.push(innerRowObj);
+                        }
+                    }
+                });
+
+                // Call the 'editInvoice' function with the data
+                const allRowsDataJSON = JSON.stringify(allRowsData);
+                // Create a URL with the encoded parameter
+                const newEditInvoiceURL = `/new_return_invoice?data=${encodeURIComponent(allRowsDataJSON)}`;
+                // Open the new_edit_invoice page with the data as a parameter
+                window.open(newEditInvoiceURL);
+            });
+        });
+
         function doesRowExist(rowsArray, row) {
             const rowObj = getRowData(row);
             return rowsArray.some(existingRow => JSON.stringify(existingRow) === JSON.stringify(rowObj));
@@ -376,6 +563,240 @@
             return uri + separator + key + "=" + value;
         }
     }
+</script>
+
+<script>
+    document.querySelectorAll('.voucherButton').forEach(button => {
+        button.addEventListener('click', function () {
+            const posId = this.getAttribute('data-posid');
+            
+            // Display the pos.id in the modal
+            document.getElementById('id_salepos').value = posId;
+    
+            // Open the modal using Bootstrap's modal method
+            $('#voucherModal').modal('show');
+        });
+    });
+    
+</script>
+
+
+<script>
+    // Example Bootstrap validation using the 'needs-validation' class
+    // You may customize this based on your validation requirements
+    (function () {
+        'use strict';
+
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        var forms = document.querySelectorAll('.needs-validation');
+
+        // Loop over them and prevent submission
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+
+                    form.classList.add('was-validated');
+                }, false);
+            });
+    })();
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all elements with the class 'amount' in the table body
+        const amountElements = document.querySelectorAll('tbody td:nth-child(4)');
+
+        // Calculate the total amount
+        const totalAmount = Array.from(amountElements).reduce((total, element) => {
+            const amount = parseFloat(element.textContent) || 0;
+            return total + amount;
+        }, 0);
+
+        // Display the total amount in the designated element
+        document.querySelector('.totalAmount').textContent = `${totalAmount.toFixed(2)}`;
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all elements with the class 'amount' in the table body
+        const amountElements = document.querySelectorAll('tbody td:nth-child(6)');
+
+        // Calculate the total amount
+        const totalAmount = Array.from(amountElements).reduce((total, element) => {
+            const amount = parseFloat(element.textContent) || 0;
+            return total + amount;
+        }, 0);
+
+        // Display the total amount in the designated element
+        document.querySelector('.totalSubtotal').textContent = `${totalAmount.toFixed(2)}`;
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all elements with the class 'amount' in the table body
+        const amountElements = document.querySelectorAll('tbody td:nth-child(7)');
+
+        // Calculate the total amount
+        const totalAmount = Array.from(amountElements).reduce((total, element) => {
+            const amount = parseFloat(element.textContent) || 0;
+            return total + amount;
+        }, 0);
+
+        // Display the total amount in the designated element
+        document.querySelector('.totalpaidAmount').textContent = `${totalAmount.toFixed(2)}`;
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const table = document.querySelector('.pos-table');
+      const toggleButtonsContainer = document.getElementById('toggleButtons');
+  
+      // Function to toggle column visibility
+      function toggleColumnVisibility(columnIndex) {
+        const cells = table.querySelectorAll(`td:nth-child(${columnIndex + 1}), th:nth-child(${columnIndex + 1})`);
+  
+        cells.forEach(cell => {
+          cell.style.display = cell.style.display === 'none' ? '' : 'none'; // Toggle visibility
+        });
+      }
+  
+      // Add buttons for each column
+      const columnNames = Array.from(table.querySelector('thead').querySelectorAll('th')).map(th => th.textContent.trim());
+  
+      columnNames.forEach((columnName, index) => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-secondary';
+        button.textContent = columnName;
+        button.addEventListener('click', () => toggleColumnVisibility(index));
+        toggleButtonsContainer.appendChild(button);
+      });
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const table = document.querySelector('.pos-table');
+        const toggleColumnsDropdownMenu = document.getElementById('toggleColumnsDropdownMenu');
+
+        // Retrieve the column visibility status from localStorage
+        // If not available, initialize with all columns visible
+        let columnVisibility = JSON.parse(localStorage.getItem('columnVisibility')) || Array.from(table.querySelector('thead').querySelectorAll('th')).map(() => true);
+
+        // Function to toggle column visibility
+        function toggleColumnVisibility(columnIndex, button) {
+            const cells = table.querySelectorAll(`td:nth-child(${columnIndex + 1}), th:nth-child(${columnIndex + 1})`);
+
+            // Toggle visibility and update the visibility status in localStorage
+            cells.forEach(cell => {
+                columnVisibility[columnIndex] = !columnVisibility[columnIndex];
+                cell.style.display = columnVisibility[columnIndex] ? '' : 'none';
+            });
+
+            // Save the updated visibility status in localStorage
+            localStorage.setItem('columnVisibility', JSON.stringify(columnVisibility));
+
+            // Change the background color of the clicked button
+            button.style.backgroundColor = columnVisibility[columnIndex] ? '' : 'lightgray';
+            window.location.reload()
+        }
+
+        // Add options for each column to the dropdown
+        const columnNames = Array.from(table.querySelector('thead').querySelectorAll('th')).map(th => th.textContent.trim());
+
+        columnNames.forEach((columnName, index) => {
+            const option = document.createElement('button');
+            option.className = 'dropdown-item';
+            option.textContent = columnName;
+            option.addEventListener('click', () => toggleColumnVisibility(index, option));
+            toggleColumnsDropdownMenu.appendChild(option);
+
+            // Apply initial visibility based on stored state
+            if (!columnVisibility[index]) {
+                const cells = table.querySelectorAll(`td:nth-child(${index + 1}), th:nth-child(${index + 1})`);
+                cells.forEach(cell => {
+                    cell.style.display = 'none';
+                });
+                
+                // Change the background color of the button
+                option.style.backgroundColor = 'lightgray';
+                
+            }
+        });
+    });
+</script>
+
+
+<script>
+    // Add an event listener for delete button click
+    $('.deleteButton').on('click', function () {
+        const posId = $(this).data('target');
+
+        if (confirm('Are you sure you want to delete this record?')) {
+            $.ajax({
+                url: '/delete_invoice_transacrtion/',  // Replace with your actual delete URL
+                method: 'POST',
+                data: {
+                    posId: posId,
+                    csrfmiddlewaretoken: getCSRFToken(),
+                },
+                success: function (data) {
+                    console.log('Record deleted successfully:', data);
+                    // Optionally, you can update the UI or show a success message
+                    window.location.reload(); // Reload the page after deletion
+                },
+                error: function (error) {
+                    console.error('Error deleting record:', error);
+                    // Handle errors if needed
+                }
+            });
+        }
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Add an event listener for the view button click
+        document.querySelectorAll('.viewButton').forEach(button => {
+            button.addEventListener('click', function () {
+                // Extract data from the clicked row
+                const clickedRow = this.closest('tr');
+                const allRowsData = getRowData(clickedRow);
+
+                // Get the product table from the clicked row
+                const productTable = clickedRow.querySelector('.inner-table tbody');
+
+                // Clone the product table and append it to the modal body
+                const productTableClone = productTable.cloneNode(true);
+                document.querySelector('#exampleModal6 .modal-body').innerHTML = '';
+                document.querySelector('#exampleModal6 .modal-body').appendChild(productTableClone);
+
+                // Set the table headers dynamically
+                const headerRow = document.querySelector('#exampleModal6 .modal-body .inner-table thead tr');
+                headerRow.innerHTML = '<th>Name</th><th>Unit</th><th>SKU</th><th>Unit Cost</th><th>Subtotal</th>';
+
+                // Open the modal using Bootstrap's modal method
+                $('#exampleModal6').modal('show');
+            });
+        });
+
+        function getRowData(row) {
+            return {
+                name: row.querySelector('.name-input').value,
+                unit: row.querySelector('.unit-input').value,
+                sku: row.querySelector('.sku-input').value,
+                quantity: parseFloat(row.querySelector('.quantity-input').value) || 0,
+                unitCost: parseFloat(row.querySelector('.unit-cost-input').value) || 0,
+                subtotal: parseFloat(row.querySelector('.subtotal-input').value) || 0
+            };
+        }
+    });
 </script>
 
 {% endblock %}

@@ -32,7 +32,6 @@
             <thead>
                 <tr>
                     <th style="text-align:center; padding:5px">Serial</th>
-                    <th style="text-align:center; padding:5px">Item</th>
                     <th style="text-align:center; padding:5px">Product Name</th>
                     <th style="text-align:center; padding:5px">Unit</th>
                     <th style="text-align:center; padding:5px">Quantity</th>
@@ -44,7 +43,6 @@
                 {% for product in products %}
                     <tr>
                         <td style="text-align:center; padding:5px">{{ forloop.counter }}</td>
-                        <td style="text-align:center; padding:5px">{{ product.item_name }}</td>
                         <td style="text-align:center; padding:5px">{{ product.name }}</td>
                         <td style="text-align:center; padding:5px">{{ product.unit }}</td>
                         <td style="text-align:center; padding:5px">{{ product.quantity }}</td>
@@ -92,7 +90,6 @@
             <thead>
                 <tr>
                     <th style="text-align:center; padding:5px">Serial</th>
-                    <th style="text-align:center; padding:5px">Item</th>
                     <th style="text-align:center; padding:5px">Product Name</th>
                     <th style="text-align:center; padding:5px">Quantity</th>
                  
@@ -102,7 +99,6 @@
                 {% for product in products %}
                     <tr>
                         <td style="text-align:center; padding:5px">{{ forloop.counter }}</td>
-                        <td style="text-align:center; padding:5px">{{ product.item_name }}</td>
                         <td style="text-align:center; padding:5px">{{ product.name }}</td>
                         <td style="text-align:center; padding:5px">{{ product.quantity }}</td>
                       

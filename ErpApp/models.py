@@ -28,7 +28,7 @@ ROLE_CHOICES = [
 class CustomUser(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
-
+    
     groups = models.ManyToManyField(
         Group,
         related_name='custom_users',  # Set a unique related_name for CustomUser's groups
@@ -80,43 +80,39 @@ class CustomerList(models.Model):
 
 
 
-class ItemName(models.Model):
-    name = models.CharField(max_length=100)
 
-    def __str__(self) -> str:
-        return self.name
 
 
 
 class Product(models.Model):
     # Basic Information
-    item = models.ForeignKey(ItemName, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
-    sku = models.PositiveIntegerField(unique=True, blank=True, null=True)
+    sku = models.CharField(max_length=255,unique=True, blank=True, null=True)
     uom = models.CharField(max_length=255)
     vendor = models.CharField(max_length=255, null=True, blank=True)
     brand = models.CharField(max_length=255, null=True, blank=True)
     category = models.CharField(max_length=255, null=True, blank=True)
     sub_category = models.CharField(max_length=255, null=True, blank=True)
     product_type = models.CharField(max_length=50, choices=[('single', 'Single'), ('group', 'Group')])
-    variation_name = models.CharField(max_length=255, blank=True)
-    variation_values = models.CharField(max_length=255, blank=True)
+    variation_name = models.CharField(max_length=255, null=True, blank=True)
+    variation_values = models.CharField(max_length=255, blank=True, null=True)
     barcode_type = models.CharField(max_length=255, null=True, blank=True)
 
     # Inventory Information
     alert_quantity = models.IntegerField(default=0, null=True, blank=True)
     lead_time = models.IntegerField(default=0, null=True, blank=True)
     reorder_quantity = models.IntegerField(default=0, null=True, blank=True)
-    reorder_date = models.DateField()
+    reorder_date = models.DateField(null=True, blank=True)
     expires_in = models.IntegerField(default=0, null=True, blank=True)
     tax = models.IntegerField(default=0, null=True, blank=True)
-    purchase_price = models.FloatField()
+    purchase_price = models.FloatField(null=True, blank=True)
     transport_cost = models.FloatField(default=0, null=True, blank=True)
     other_cost = models.FloatField(default=0, null=True, blank=True)
-
+    manage_stock = models.IntegerField(null=True, blank=True)
     # Cost of Goods Sold (COGS)
     cogs = models.FloatField(null=True, blank=True)
-
+    selling_price = models.FloatField(default=0.0)
+    product_type = models.CharField(max_length=255, null=True, blank=True)
     profit_margin_base_seeling = models.IntegerField(default=45)
     profit_margin_mrp = models.IntegerField(null=True, blank=True, default=0)
 
@@ -137,7 +133,7 @@ class Product(models.Model):
     opening_stock = models.IntegerField(default=0, null=True, blank=True)
 
     # Location and Position
-    inventory_location = models.CharField(max_length=255)
+    inventory_location = models.CharField(max_length=255, blank=True, null=True, default="none")
     weight = models.FloatField(default=0, null=True, blank=True)
     position = models.IntegerField(default=0, null=True, blank=True)
     rack = models.IntegerField(default=0,null=True, blank=True)
@@ -148,10 +144,10 @@ class Product(models.Model):
     image = models.ImageField(upload_to='product_images/', null=True, blank=True)
     product_description = models.TextField(null=True, blank=True)
     instruction = models.TextField(null=True, blank=True)
-    custom_field_1 = models.CharField(max_length=255, blank=True)
-    custom_field_2 = models.CharField(max_length=255, blank=True)
-    custom_field_3 = models.CharField(max_length=255, blank=True)
-    selling = models.BooleanField(default=False)
+    custom_field_1 = models.CharField(max_length=255, blank=True, null=True, default="none")
+    custom_field_2 = models.CharField(max_length=255, blank=True, null=True, default="none")
+    custom_field_3 = models.CharField(max_length=255, blank=True, null=True, default="none")
+    selling = models.BooleanField(default=False, null=True, blank=True)
 
     def calculate_base_selling_price(self):
         return self.cogs + (self.cogs * (self.profit_margin_base_seeling  / 100))
@@ -166,7 +162,6 @@ class Product(models.Model):
         if not self.sku:
         # Get the maximum existing SKU
             max_sku = Product.objects.aggregate(Max('sku'))['sku__max']
-
             # If there are no existing SKUs, start from 1000
             if max_sku is None:
                 max_sku = 1110
@@ -192,7 +187,7 @@ class InvoiceProduct(models.Model):
     
     name = models.CharField(max_length=255)
     item_name = models.CharField(max_length=255)
-    sku = models.IntegerField()
+    sku = models.CharField(max_length=255)
     quantity = models.FloatField()
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
     unit = models.CharField(max_length=100, default="kg")
@@ -208,7 +203,7 @@ class SetPos(models.Model):
     total_with_discount = models.DecimalField(max_digits=10, decimal_places=2)
     products = models.ManyToManyField(InvoiceProduct)
     paid_amount = models.FloatField(default =0, null=True, blank=True)
-    due_amount = models.FloatField(default=0,)
+    due_amount = models.FloatField(default=0)
     status = models.CharField(max_length=100)
     order_sheet = models.CharField(max_length=100, default="order", null=True, blank= True)
     invoice_date = models.DateTimeField(auto_now_add=True)
@@ -216,12 +211,29 @@ class SetPos(models.Model):
     delivery_status = models.CharField(max_length=100, default="incomplete", null=True, blank= True)
     invoice_by = models.CharField(max_length=100)
     systemname = models.CharField(max_length=100,null=True, blank=True)
-
+    cancel_show = models.CharField(max_length=100, default = "show")
+    
     def __str__(self) -> str:
         return self.customer.Debtors_Name
 
 
-
+class SetPosCancelation(models.Model):
+    customer = models.ForeignKey(CustomerList, on_delete=models.CASCADE)
+    discount = models.DecimalField(max_digits=5, decimal_places=2)
+    total_subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    total_with_discount = models.DecimalField(max_digits=10, decimal_places=2)
+    products = models.ManyToManyField(InvoiceProduct)
+    paid_amount = models.FloatField(default =0, null=True, blank=True)
+    due_amount = models.FloatField(default=0)
+    status = models.CharField(max_length=100)
+    order_sheet = models.CharField(max_length=100, default="order", null=True, blank= True)
+    invoice_date = models.DateTimeField(auto_now_add=True)
+    delivery_date = models.DateTimeField(auto_now_add=True)
+    delivery_status = models.CharField(max_length=100, default="incomplete", null=True, blank= True)
+    invoice_by = models.CharField(max_length=100)
+    systemname = models.CharField(max_length=100,null=True, blank=True)
+    your_datetime_field = models.DateTimeField(auto_now_add=True)
+    
 
 
 class PartyList(models.Model):
@@ -323,6 +335,9 @@ class PaymentMethodname(models.Model):
         blank=True
     )
 
+    def __str__(self):
+        return self.name
+
 
 class Voucher(models.Model):
     PAYMENT_METHOD = [
@@ -334,7 +349,15 @@ class Voucher(models.Model):
         # Add more choices as needed
     ]
 
-    vouchernumber = models.IntegerField(default=0)
+
+    Type = [
+            ('Receive', 'Receive'),
+            ('Payment', 'Payment'),
+          
+            # Add more choices as needed
+        ]
+        
+    vouchernumber = models.IntegerField(default=0, null = True, blank=True)
     amount = models.FloatField()
     payment_status = models.CharField(
         max_length=100,
@@ -344,6 +367,13 @@ class Voucher(models.Model):
         blank=True
     )
     description = models.TextField()
+    type = models.CharField(
+        max_length=100,
+        choices=Type,
+        default='Receive',
+        null=True,
+        blank=True
+    )
     salepos = models.ForeignKey(SetPos, on_delete=models.CASCADE, null=True, blank=True)
     purchasepos = models.ForeignKey(SetPosPurchase, on_delete=models.CASCADE, null=True, blank=True)
     account_info = models.ForeignKey(PaymentMethodname, on_delete=models.CASCADE)
@@ -351,4 +381,17 @@ class Voucher(models.Model):
 
     def __str__(self):
         return f"Voucher {self.vouchernumber}"
-    
+
+
+
+class Account(models.Model):
+    invoice_id_view = models.ForeignKey(SetPos, on_delete=models.CASCADE, null=True, blank=True)
+    pos_id_view = models.ForeignKey(SetPosPurchase, on_delete=models.CASCADE, null=True, blank=True)
+    invoice_sale_now = models.FloatField(null=True, blank=True, default=0)
+    pos_sale_now = models.FloatField(null=True, blank=True, default=0)
+    total_sale = models.FloatField(null=True, blank=True)
+    total_purcahse = models.FloatField(null=True, blank=True)
+    total_sell_discount = models.FloatField(null=True, blank=True)
+    total_payment_done = models.FloatField(default = 0, null=True, blank=True)
+    total_amount = models.FloatField(null=True, blank=True)
+    total_due_amount = models.FloatField(default =0, null=True, blank=True)

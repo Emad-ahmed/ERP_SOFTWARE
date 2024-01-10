@@ -1,0 +1,578 @@
+{% extends 'ERP/base.html' %}
+
+{% block title %}Edit Invoice{% endblock %}
+{% load static %}
+{% block content %}
+
+<link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
+
+<h3 class="text-center mt-4">Return Invoice</h3>
+
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-center" id="exampleModalLabel">Product Details</h5>
+            </div>
+            <div class="modal-body" id="modalContent">
+                <!-- Product details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+<p id="myTime" class="mytime mt-3"></p>
+
+<div class="customer-details" id="customerDetails">
+    <!-- Customer details will be displayed here -->
+</div>
+
+<div class="search-container">
+    <input class="search-input" id="customerSearch" type="text" placeholder="Search for customers">
+    <div class="search-list" id="customerList">
+        <!-- Customer list items will be populated here -->
+    </div>
+</div>
+
+<div class="search-container">
+    <input class="search-input" id="productSearch" type="text" placeholder="Search for products">
+    <div class="search-list" id="productList">
+        <!-- Product list items will be populated here -->
+    </div>
+</div>
+
+<div class="mytransactionedit mb-5">
+    <a href="{% url "transaction" %}" class="transaction colortransaction">All Transaction</a>
+</div>
+
+<table class="list-table editlist-table">
+    <thead>
+        <tr>
+            <th>Serial Number</th>
+            <th>Name</th>
+            <th>SKU</th>
+            <th>Unit Cost</th>
+            <th>Unit</th>
+            <th>Quantity</th>
+            <th class="subtotal-cell">Subtotal</th>
+            <th>Action</th>
+            <th>View</th>
+        </tr>
+    </thead>
+    <tbody id="productTable">
+       
+    </tbody>
+</table>
+
+<div id="summarySection">
+    <p>Total Products Added: <span id="productCount">0</span></p>
+    <p>Total Subtotal: <span id="totalSubtotal">0.00</span></p>
+    <p>Total Quantity: <span id="totalQuantity">0</span></p>
+    <p>Total with Discount: <span id="totalWithDiscount">0.00</span></p>
+</div>
+
+<div>
+    <input type="number" min="0" placeholder="Discount">
+</div>
+
+<div class="allbuttonprint mb-5">
+    <a href="#" id="draftLink">Draft</a>
+    <a href="#" id="QuatationLink">Quotation</a>
+    <a href="#" id="CredittLink">Credit Sale</a>
+    <a href="#" id="CashLink">Cash</a>
+</div>
+
+<script>
+    // Get the URL parameter named 'data'
+    const urlParams = new URLSearchParams(window.location.search);
+    const rawData = urlParams.get('data');
+    const customerDetailsContainer = document.getElementById('customerDetails');
+    const productTableContainer = document.getElementById('productTable');
+    let lastClickedCustomer = null;
+    const discountInput = document.querySelector('input[type="number"]');
+    let totalSubtotal = parseFloat(document.getElementById('totalSubtotal').textContent) || 0;
+    
+   
+
+    discountInput.addEventListener('input', function () {
+        updateTotalWithDiscount();
+    });
+
+    const allRowsData = JSON.parse(decodeURIComponent(rawData));
+ 
+    const customerID = allRowsData[0].customerid;
+
+    // Fetch customer data based on the customer ID
+    fetch(`/get-customer-data/?customerid=${customerID}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.customer_data) {
+                // Display the customer details using the fetched data
+                console.log(data.customer_data);
+                customerDetailsContainer.innerHTML = `<p><span>Customer Id: ${data.customer_data.customer_id}</span>-<span>Customer Name: ${data.customer_data.customer_name}</span>-<span>Mobile: ${data.customer_data.customer_phone}</span></p>`;
+
+            } else {
+                console.error('Error fetching customer data:', data.error);
+            }
+        })
+        .catch(error => console.error('Error fetching customer data:', error));
+
+
+
+    
+
+    const posid = allRowsData[0].posid;
+    // Function to create HTML content for each row
+    function createRowHTML(rowData, index) {
+        const calculateSubtotal = () => rowData.unitCost * rowData.quantity;
+        const subtotal = calculateSubtotal();
+        console.log(rowData)
+        return `
+            <tr>
+                <td>${index}</td>
+                <td><input type="text" value="${rowData.name !== undefined ? rowData.name : ''}"></td>
+                <td><input type="text" value="${rowData.sku !== undefined ? rowData.sku : ''}"></td>
+                <td><input type="number" value="${rowData.unitCost !== undefined ? rowData.unitCost : ''}" class="unitCostInput"></td>
+                <td><input type="text" value="${rowData.unit !== undefined ? rowData.unit : ''}" class="unitInput"></td>
+                <td><input type="number" step="0.1"  value="${rowData.quantity !== undefined ? rowData.quantity : '1'}" class="quantityInput"></td>
+                <td class="subtotal-cell"><input type="number" value="${subtotal.toFixed(2)}" readonly class="subtotalInput"></td>
+                <td><button class='delete-button btn btn-danger'>Delete</button></td>
+                <td><button class='view-link btn btn-info' data-bs-toggle='modal' data-bs-target='#exampleModal' data-product-name='${rowData.name}'>View</button></td>
+            </tr>
+        `;
+    }
+
+    // Event delegation for dynamically added quantity input fields
+    productTableContainer.addEventListener('input', function (event) {
+        const target = event.target;
+        if (target.classList.contains('quantityInput')) {
+            updateSubtotal(target);
+            updateSummary(); // Update summary after changing quantity
+            
+            // Additional logic to update other totals if needed
+        }
+    });
+
+    // Function to update subtotal based on quantity change
+    function updateSubtotal(quantityInput) {
+        const row = quantityInput.closest('tr');
+        const unitCostInput = row.querySelector('.unitCostInput');
+        const subtotalInput = row.querySelector('.subtotalInput');
+
+        const unitCost = parseFloat(unitCostInput.value) || 0;
+        const quantity = parseInt(quantityInput.value) || 1;
+        const subtotal = unitCost * quantity;
+        
+        subtotalInput.value = subtotal.toFixed(2);
+        
+    }
+
+    // Function to update summary
+    function updateSummary() {
+        const productRows = Array.from(productTableContainer.querySelectorAll('tbody tr'));
+        const productCount = productRows.length;
+        const totalSubtotal = productRows.reduce((total, row) => {
+            const subtotalInput = row.querySelector('.subtotalInput');
+            const subtotal = parseFloat(subtotalInput.value) || 0;
+            return total + subtotal;
+        }, 0);
+
+        const totalQuantity = productRows.reduce((total, row) => {
+            const quantityInput = row.querySelector('.quantityInput');
+            const quantity = parseInt(quantityInput.value) || 0;
+            return total + quantity;
+        }, 0);
+
+        document.getElementById('productCount').textContent = productCount;
+        document.getElementById('totalSubtotal').textContent = totalSubtotal.toFixed(2);
+        document.getElementById("totalWithDiscount").textContent = totalSubtotal.toFixed(2);
+   
+        document.getElementById('totalQuantity').textContent = totalQuantity;
+    }
+
+    // Loop through the rows and append HTML content to the container
+    for (let i = 1; i < allRowsData.length; i++) {
+        productTableContainer.innerHTML += createRowHTML(allRowsData[i], i);
+    }
+
+    // Define the fetchData function to fetch data from the server
+    async function fetchData(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const data = await response.json();
+            return data.customer_data || data.product_data || [];
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            throw error;
+        }
+    }
+
+    function updateTotalWithDiscount() {
+        const totalSubtotal = parseFloat(document.getElementById('totalSubtotal').textContent) || 0;
+        const discountPercentage = parseFloat(discountInput.value) || 0;
+    
+        // Calculate the discount based on the percentage
+        const discount = (totalSubtotal * discountPercentage) / 100;
+    
+        const totalWithDiscount = totalSubtotal - discount;
+    
+        document.getElementById('totalWithDiscount').textContent = totalWithDiscount.toFixed(2);
+    }
+    
+    function displayCustomerDetails(customer) {
+        // Replace this with your logic to display customer details
+        
+        // Example: Set customer details in the container
+        customerDetailsContainer.innerHTML = `<p><span>Customer Id: ${customer.id}</span>-<span>Customer Name: ${customer.Debtors_Name}</span>-<span>Customer Name: ${customer.Debtors_Name}</span> <span>Mobile: ${customer.Phone}</span></p>`;
+        lastClickedCustomer = customer;
+    }
+
+    function setProductInRow(product) {
+        // Check if the product is already in the table
+        const productName = product.Debtors_Name || product.name;
+        const existingProducts = Array.from(document.querySelectorAll('#productTable input[type="text"][value="' + productName + '"]'));
+
+        if (existingProducts.length > 0) {
+            // Product already in the table, show an alert
+            alert('Product already in the table!');
+        } else {
+            // Product not in the table, add it to the table
+           
+            let unitCost = product.mrp;
+            let unit = product.uom;
+            let quantity = 1;
+            const newRow = createRowHTML({ ...product, unitCost, unit, quantity}, productTableContainer.childElementCount + 1);
+            productTableContainer.insertAdjacentHTML('beforeend', newRow);
+        }
+    }
+
+
+    
+
+    function updateSearchList(inputId, listId, containerId, url, isCustomer) {
+        const input = document.getElementById(inputId);
+        const list = document.getElementById(listId);
+        const container = document.getElementById(containerId);
+
+        input.addEventListener('focus', async function () {
+            const dataList = await fetchData(url);
+
+            list.style.display = 'block';
+            list.innerHTML = '';
+
+            dataList.forEach(item => {
+                const listItem = document.createElement('div');
+                listItem.classList.add('search-item');
+                listItem.textContent = isCustomer ? item.Debtors_Name || item.name : item.ProductName || item.name;
+
+                listItem.addEventListener('click', async function () {
+                    input.value = isCustomer ? item.Debtors_Name || item.name : item.ProductName || item.name;
+                    list.style.display = 'none';
+
+                    if (isCustomer) {
+                        // Display the full details in the added items container
+                        displayCustomerDetails(item);
+                    } else {
+                        // Add the product to the table
+                        setProductInRow(item);
+                        updateSummary(); // Update summary after adding a new product
+                    }
+                });
+
+                list.appendChild(listItem);
+            });
+        });
+
+        input.addEventListener('blur', function () {
+            setTimeout(() => {
+                list.style.display = 'none';
+            }, 200);
+        });
+
+        input.addEventListener('input', function () {
+            const searchTerm = input.value.toLowerCase();
+            const items = list.getElementsByClassName('search-item');
+
+            Array.from(items).forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    // Event delegation for dynamically added delete buttons
+    productTableContainer.addEventListener('click', function (event) {
+        const target = event.target;
+        if (target.classList.contains('delete-button')) {
+            const row = target.closest('tr');
+            row.remove();
+            updateSummary(); // Update summary after deleting a product
+            // Additional logic to update other totals if needed
+        }
+    });
+
+    // Event listener for the view link
+    productTableContainer.addEventListener('click', function (event) {
+        const target = event.target;
+        if (target.classList.contains('view-link')) {
+            const productName = target.getAttribute('data-product-name');
+            // Add logic here to fetch and display product details based on productId
+
+            console.log(productName)
+            openModal(productName);
+        }
+    });
+
+
+   
+    function saveInvoice(status) {
+        // Get the customer details
+        const customerDetails = document.getElementById('customerDetails').textContent.trim();
+        const totalSubtotal = parseFloat(document.getElementById('totalSubtotal').textContent) || 0;
+        const totalWithDiscount = parseFloat(document.getElementById('totalWithDiscount').textContent) || 0;
+        // Get the discount value
+        const discountValue = parseFloat(discountInput.value) || 0;
+    
+        // Get all table rows
+        const tableRows = document.getElementById('productTable').getElementsByTagName('tr');
+        // Create an array to store product details
+        const productsArray = [];
+    
+        // Iterate through each row in the table
+        for (let i = 0; i < tableRows.length; i++) {
+            const row = tableRows[i];
+            // No need to assign a product ID, let the backend handle it
+           
+            const Name = row.cells[1].querySelector('input').value;
+            const Sku = row.cells[2].querySelector('input').value;
+            const quantity = parseFloat(row.cells[5].querySelector('input').value) || 0;
+            const unitCost = parseFloat(row.cells[3].querySelector('input').value) || 0;
+            const unit = row.cells[4].querySelector('input').value;
+            const subtotal = parseFloat(row.cells[6].querySelector('input').value) || 0;
+    
+            // Create an object with product details
+            const productDetails = {
+                name: Name,
+                sku: Sku,
+                unit: unit,
+                quantity: quantity,
+                unit_cost: unitCost,
+                subtotal: subtotal
+            };
+    
+            // Add the product details to the array
+            productsArray.push(productDetails);
+        }
+
+        function extractCustomerId(customerDetails) {
+            // Your logic to extract the customer ID from customerDetails goes here
+            // For now, let's assume customerDetails is a string like "Customer Id: 123"
+            const customerIdMatch = customerDetails.match(/Customer Id: (\d+)/);
+            return customerIdMatch ? customerIdMatch[1] : null;
+        }
+    
+        const customerId = extractCustomerId(customerDetails);
+    
+        // Now you have an array (productsArray) containing details of all products in the table
+        // Display the gathered information in the console for testing
+       
+        
+        // You can send this information to the server or perform any other actions.
+        // Here, let's assume you're using fetch to send the data to a Django view
+        fetch('/generate_return_invoice_pdf/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                posid : posid,
+                customerId: customerId,
+                discountValue: discountValue,
+                productsArray: productsArray,
+                totalSubtotal: totalSubtotal,
+                totalWithDiscount: totalWithDiscount,
+                status: status,
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Log the response from the server if needed
+            // Refresh the page after the POST request is complete
+            if (data.message === 'Data saved successfully') {
+                // Display success message based on status
+    
+                // Check if the PDF URL is provided
+                if (data.pdf_url) {
+                    // Open the PDF file
+                    window.open(data.pdf_url, '_blank');
+                } else {
+                    // If PDF URL is not provided, simply reload the page
+                    location.reload();
+                }
+            } else {
+                // Display an error message
+                alert('Error saving data: ' + data.message);
+                location.reload();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    
+    // Event listener for draft link
+    document.getElementById('draftLink').addEventListener('click', function () {
+        saveInvoice('draft');
+    });
+    
+    // Event listener for credit sale link
+    document.getElementById('CredittLink').addEventListener('click', function () {
+        saveInvoice('credit_sale');
+    });
+
+
+    
+
+    document.getElementById('QuatationLink').addEventListener('click', function () {
+        saveInvoice('quatation');
+    });
+
+
+    document.getElementById('CashLink').addEventListener('click', function () {
+        saveInvoice('cash');
+    });
+
+    
+    
+    // Event listener for the last clicked customer
+    customerDetailsContainer.addEventListener('click', function () {
+        if (lastClickedCustomer) {
+            
+            // Add logic here to display details for the last clicked customer
+        }
+    });
+
+    updateSearchList('customerSearch', 'customerList', 'customerDetails', '/customer-list/', true);
+    updateSearchList('productSearch', 'productList', 'productTable', '/product-list/', false);
+
+    // Call updateSummary initially to set the initial values
+    updateSummary();
+
+    async function openModal(productName) {
+        const modalContent = document.getElementById('modalContent');
+        console.log('Opening modal for product name:', productName);
+
+        // Fetch product details using product name and update modal content
+        const url = `/product-details-by-name/?name=${productName}`;  // Update the URL pattern
+
+
+        // Log the URL to check if it's correct
+        console.log('Fetching data from URL:', url);
+
+        try {
+            // Assuming you have a function fetchData similar to what you used before
+            const response = await fetch(url);
+            const { product_data, error } = await response.json();
+
+            if (error) {
+                console.error('Error fetching product details:', error);
+                return;
+            }
+
+            // Log the received product details to check
+            console.log('Received product details:', product_data);
+
+            // Customize this part based on your product details
+            modalContent.innerHTML = `
+                <p><span class="pbold">Product Name:</span> ${product_data.name}</p>
+                <p><span class="pbold">SKU:</span> ${product_data.sku}</p>
+                <p><span class="pbold">Unit Cost:</span> ${product_data.unit_cost}</p>
+                <p><span class="pbold">Unit:</span> ${product_data.unit}</p>
+                <p><span class="pbold">Description:</span> ${product_data.description}</p>
+                <!-- Add more fields as needed -->
+
+                <!-- You can customize the layout and style based on your design -->
+
+                <!-- For example, add an image -->
+                <img src="${product_data.image_url}" alt="Product Image" width="100">
+            `;
+
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('exampleModal'));
+            modal.show();
+        } catch (error) {
+            // Log the error to identify the issue
+            console.error('Error fetching product details:', error);
+        }
+    }
+
+    // Event listener for the view link
+   
+
+</script>
+<script src="{% static "js/timeset.js" %}"></script>
+
+
+<script>
+    async function openModal(productName) {
+        const modalContent = document.getElementById('modalContent');
+        console.log('Opening modal for product name:', productName);
+    
+        // Fetch product details using product name and update modal content
+        const url = `/product-details-by-name/${encodeURIComponent(productName)}/`;
+    
+        // Log the URL to check if it's correct
+        console.log('Fetching data from URL:', url);
+    
+        try {
+            // Assuming you have a function fetchData similar to what you used before
+            const response = await fetch(url);
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+    
+            const { product_data, error } = await response.json();
+    
+            if (error) {
+                console.error('Error fetching product details:', error);
+                return;
+            }
+    
+            // Log the received product details to check
+            console.log('Received product details:', product_data);
+    
+            // Customize this part based on your product details
+            modalContent.innerHTML = `
+                <p><span class="pbold">Product Name:</span> ${product_data.name}</p>
+                <p><span class="pbold">SKU:</span> ${product_data.sku}</p>
+                <p><span class="pbold">Unit Cost:</span> ${product_data.mrp}</p>
+                <p><span class="pbold">Unit:</span> ${product_data.uom}</p>
+                <p><span class="pbold">Description:</span> ${product_data.product_description}</p>
+                <!-- Add more fields as needed -->
+    
+                <!-- You can customize the layout and style based on your design -->
+    
+                <!-- For example, add an image -->
+                <img src="${product_data.image}" alt="Product Image" width="100">
+            `;
+    
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('exampleModal'));
+            modal.show();
+        } catch (error) {
+            // Log the error to identify the issue
+            console.error('Error fetching product details:', error);
+        }
+    }
+    
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-eaQGWnCjZpX40QjzHsmVQrF4ueMjQe2Y4BSJRv4jgiK7Cpd0Rx98jXeCE6NYbswP" crossorigin="anonymous"></script>
+
+{% endblock %}

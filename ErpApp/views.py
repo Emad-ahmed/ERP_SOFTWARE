@@ -7,7 +7,7 @@ from django.http import JsonResponse
 import json
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
-from .models import ActivityLog,CustomerList,Product, SetPos, InvoiceProduct, ItemName, PartyList, SetPosPurchase, Employee
+from .models import ActivityLog,CustomerList,Product, SetPos, InvoiceProduct,  PartyList, SetPosPurchase, Employee, Voucher, Account, SetPosCancelation
 from django.views.decorators.csrf import csrf_exempt
 import os
 from django.conf import settings
@@ -15,8 +15,6 @@ from django.http import HttpResponse
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from .utils import link_callback
-from reportlab.pdfgen import canvas
-from io import BytesIO
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from reportlab.lib import styles
 from reportlab.pdfbase import pdfmetrics
@@ -24,9 +22,17 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from django.views.decorators.http import require_POST
-from .forms import CustomerListForm, PartyListForm, ItemNameForm, ProductForm, ProductUpdateForm, EmployeeForm
+from .forms import CustomerListForm, PartyListForm,  ProductForm, ProductUpdateForm, EmployeeForm, VoucherForm
 from django.contrib import messages
-
+from decimal import Decimal
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from barcode import Code128
+from barcode.writer import ImageWriter
+from django.conf import settings
+from io import BytesIO
+from django.db.models import Sum
+from django.db import transaction
 class LoginView(View):
     def get(self, request):
         return render(request, 'login/login.html')
@@ -50,8 +56,15 @@ class LoginView(View):
 
 class HomeView(View):
     def get(self, request):
+        total_with_discount_sum = SetPos.objects.aggregate(total_sum=Sum('total_with_discount'))['total_sum']
+        paid_amount_sum = SetPos.objects.aggregate(paid_sum=Sum('paid_amount'))['paid_sum']
+        due_amount_sum = SetPos.objects.aggregate(due_sum=Sum('due_amount'))['due_sum']
         if request.user.is_authenticated:
-            return render(request, 'ERP/home.html')
+            return render(request, 'ERP/home.html', {
+            'total_with_discount_sum': total_with_discount_sum,
+            'paid_amount_sum': paid_amount_sum,
+            'due_amount_sum': due_amount_sum,
+        })
         else:
             return redirect("/")
 
@@ -63,17 +76,25 @@ class CustomerListView(View):
 
 class ProductListView(View):
     def get(self, request):
-        product_data = list(Product.objects.values('id','item__name', 'name', 'sku', 'mrp', 'uom', 'purchase_price'))
+        product_data = list(Product.objects.values('id', 'name', 'sku', 'mrp', 'uom', 'purchase_price'))
         return JsonResponse({'product_data': product_data})
 
-class ItemListView(View):
-    def get(self, request):
-        item_data = list(ItemName.objects.values('id','name'))
-        return JsonResponse({'iem-data': item_data})
 
 class NewInvoice(View):
     def get(self, request):
-        return render(request, 'ERP/new_invoice_add.html')
+        customerform = CustomerListForm() 
+        return render(request, 'ERP/new_invoice_add.html', {'customerform': customerform})
+
+    def post(self, request):
+        customerform = CustomerListForm(request.POST)
+        if customerform.is_valid():
+            customer = customerform.save()
+            messages.success(request, 'Customer saved successfully!')
+            return redirect('new_invoice')  # Replace 'your_redirect_view_name' with the actual name or URL of the view you want to redirect to
+        else:
+            messages.error(request, 'Error saving customer. Please check the form.')
+        
+        return render(request, 'ERP/new_invoice_add.html', {'customerform': customerform})
     
 
 class ProductDetailsView(View):
@@ -139,9 +160,9 @@ def save_invoice(request):
             status = data.get('status', 'draft')  # Default to 'draft' if status is not provided
 
             # Validate required fields
-            if not customer_id  or not products_array or not total_subtotal or not total_with_discount:
+            if not customer_id or not products_array or not total_subtotal or not total_with_discount:
                 return JsonResponse({'message': 'Incomplete data in the request'}, status=400)
-                
+
             # Save customer details
             try:
                 customer = CustomerList.objects.get(id=customer_id)
@@ -154,8 +175,6 @@ def save_invoice(request):
                 product = InvoiceProduct.objects.create(**product_data)
                 products.append(product)
 
-           
-
             # Create SetPos instance and save
             set_pos_instance = SetPos.objects.create(
                 customer=customer,
@@ -163,27 +182,31 @@ def save_invoice(request):
                 total_subtotal=total_subtotal,
                 total_with_discount=total_with_discount,
                 status=status,
-                invoice_by = request.user.username
+                invoice_by=request.user.username
             )
-            
+
             set_pos_instance.products.set(products)
             set_pos_id = set_pos_instance
-            # Generate PDF for product details including customer details
-            if(status == "draft"):
-                status = "Draft Invoice"
-                product_pdf_content = generate_product_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status)
-            elif(status == "credit_sale"):
-                status = "Credit Sale Invoice"
-                product_pdf_content = generate_product_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status)
-            elif(status == "quatation"):
-                status = "Quatation Invoice"
-                product_pdf_content = generate_product_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status)
-            elif(status == "cash"):
-                status = "Cash Invoice"
-                product_pdf_content = generate_product_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status)
 
-                
-                
+          
+            
+            # Generate PDF for product details including customer details
+            if status == "draft":
+                status = "Draft Invoice"
+            elif status == "credit_sale":
+                status = "Credit Sale Invoice"
+            elif status == "quatation":
+                status = "Quatation Invoice"
+            elif status == "cash":
+                status = "Cash Invoice"
+
+            product_pdf_content = generate_product_pdf(customer, products, set_pos_id, discount_value, total_subtotal,
+                                                       total_with_discount, status)
+
+
+            account = Account.objects.create(invoice_id_view=set_pos_instance, invoice_sale_now=total_with_discount)
+            account.save()
+
             # Save the PDF file
             pdf_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
             os.makedirs(pdf_dir, exist_ok=True)
@@ -191,8 +214,10 @@ def save_invoice(request):
             with open(pdf_path, 'wb') as pdf_file:
                 pdf_file.write(product_pdf_content)
 
-            # Open the PDF file
+            # Update total_sale in the Account model
             
+
+            # Open the PDF file
             subprocess.run(['start', '', pdf_path], shell=True)
 
             # Include a success message and PDF URL in the JSON response
@@ -203,6 +228,9 @@ def save_invoice(request):
         return JsonResponse({'message': 'Invalid request method'}, status=400)
 
 
+class Salecancel_view(View):
+    def get(self, request):
+        pass
 
 @csrf_exempt
 def generate_invoice_pdf(request):
@@ -277,6 +305,75 @@ def generate_invoice_pdf(request):
         return JsonResponse({'message': 'Invalid request method'}, status=400)
 
 
+@csrf_exempt
+def generate_return_invoice_pdf(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+            customer_id = data.get('customerId')
+            discount_value = data.get('discountValue', None)
+            products_array = data.get('productsArray')
+            total_subtotal = data.get('totalSubtotal')
+            total_with_discount = data.get('totalWithDiscount')
+            posid = data.get('posid')
+            
+            set_pos_instannce = SetPosCancelation.objects.get(id=posid)
+
+            # Validate required fields
+            if not customer_id  or not products_array or not total_subtotal or not total_with_discount:
+                return JsonResponse({'message': 'Incomplete data in the request'}, status=400)
+                
+            # Save customer details
+            try:
+                customer = CustomerList.objects.get(id=customer_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({'message': 'Customer does not exist'}, status=400)
+
+            # Save products without enforcing uniqueness
+            products = []
+            for product_data in products_array:
+                product = InvoiceProduct.objects.create(**product_data)
+                products.append(product)
+
+           
+
+            # Create SetPos instance and save
+            
+            set_pos_instance = set_pos_instannce
+            status = set_pos_instance.status
+            set_pos_id = set_pos_instance
+            # Generate PDF for product details including customer details
+            if(status == "draft"):
+                status = "Draft Invoice"
+                product_pdf_content = generate_product_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status)
+            elif(status == "credit_sale"):
+                status = "Credit Sale Invoice"
+                product_pdf_content = generate_product_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status)
+            elif(status == "quatation"):
+                status = "Quatation Invoice"
+                product_pdf_content = generate_product_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status)
+            elif(status == "cash"):
+                status = "Cash Invoice"
+                product_pdf_content = generate_product_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status)
+
+            # Save the PDF file
+            pdf_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
+            os.makedirs(pdf_dir, exist_ok=True)
+            pdf_path = os.path.join(pdf_dir, f'product_details_{set_pos_id.id}.pdf')
+            with open(pdf_path, 'wb') as pdf_file:
+                pdf_file.write(product_pdf_content)
+
+            # Open the PDF file
+            subprocess.run(['start', '', pdf_path], shell=True)
+
+            # Include a success message and PDF URL in the JSON response
+            return JsonResponse({'message': 'Data saved successfully', 'pdf_url': pdf_path})
+        except Exception as e:
+            return JsonResponse({'message': f'Error: {str(e)}'}, status=500)
+    else:
+        return JsonResponse({'message': 'Invalid request method'}, status=400)
+
 
 def generate_product_pdf(customer, products, set_pos_id, discount_value, total_subtotal, total_with_discount, status):
     # Prepare data for the PDF template
@@ -333,10 +430,11 @@ class TransactionView(View):
     def get(self, request):
         # Get the value of the 'status' parameter from the URL
         status_filter = request.GET.get('status', 'draft')  # Set default value to 'draft'
+        form = VoucherForm()  # Create an instance of VoucherForm
 
         # Get the value of the 'items_per_page' parameter from the URL
         items_per_page = request.GET.get('items_per_page', self.items_per_page)
-        
+
         # Filter SetPos objects based on the status parameter
         if status_filter:
             setpos = SetPos.objects.filter(status=status_filter)
@@ -357,7 +455,33 @@ class TransactionView(View):
             # If page is out of range (e.g., 9999), deliver the last page
             setpos_page = paginator.page(paginator.num_pages)
 
-        return render(request, self.template_name, {'pos_page': setpos_page, 'status_filter': status_filter, 'items_per_page': int(items_per_page)})
+        return render(request, self.template_name, {'pos_page': setpos_page, 'status_filter': status_filter, 'items_per_page': int(items_per_page), 'form': form})
+
+    def post(self, request):
+        form = VoucherForm(request.POST)
+        if form.is_valid():
+            # Save the form data to the Voucher model
+            form.instance.type = 'Receive'
+
+            # Save the form data to the Voucher model
+            voucher = form.save()
+
+            # Get the associated salepos
+            salepos = voucher.salepos
+
+            # Update SetPos data using Decimal values
+            salepos.paid_amount += float(voucher.amount)
+            salepos.due_amount = float(salepos.total_with_discount) - float(salepos.paid_amount)
+            salepos.save()
+
+            # You might want to do additional processing or redirect to another page
+            # Replace 'success_page' with the URL name or path you want to redirect to
+            return redirect(f'http://127.0.0.1:8000/transaction/?status={salepos.status}')
+                # You might want to do additional processing or redirect to another page
+
+            # If the form is not valid, render the template with the form and other data
+        return render(request, self.template_name, {'form': form, 'status_filter': 'draft'})
+
 
 class EditInvoiceView(View):
     def get(self, request):
@@ -380,6 +504,28 @@ class EditInvoiceView(View):
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
+
+
+
+class EditRetunView(View):
+    def get(self, request):
+        try:
+            # Get JSON data from the query parameters
+            data = json.loads(request.GET.get('allRowsData', '[]'))
+            status = request.GET.get('status', None)
+            # Prepare context for the template
+            context = {
+                'allRowsData': data,
+                'status': status,
+            }
+            # Render the template with the context data
+            return render(request, 'ERP/returnInvoice.html', context)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
 
 class NewOrderSheet(View):
     def get(self, request):
@@ -413,7 +559,7 @@ def update_save_invoice(request):
 
             # Check if an existing SetPos instance matches the criteria for update
             existing_set_pos_instance = SetPos.objects.filter(id=posid).first()
-
+            
             if existing_set_pos_instance:
                 # Update the existing SetPos instance
                 existing_set_pos_instance.discount = discount_value
@@ -475,6 +621,80 @@ def update_save_invoice(request):
 
 
 
+@csrf_exempt
+def return_save_invoice(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+            posid = data.get('posid')
+            customer_id = data.get('customerId')
+            discount_value = data.get('discountValue', None)
+            products_array = data.get('productsArray')
+            total_subtotal = data.get('totalSubtotal')
+            total_with_discount = data.get('totalWithDiscount')
+            status = data.get('status', 'draft')  # Default to 'draft' if status is not provided
+
+            # Validate required fields
+            if not posid or not customer_id or not products_array or not total_subtotal or not total_with_discount:
+                return JsonResponse({'message': 'Incomplete data in the request'}, status=400)
+
+            # Save customer details
+            try:
+                customer = CustomerList.objects.get(id=customer_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({'message': 'Customer does not exist'}, status=400)
+            
+            # Create a new SetPosCancelation instance
+            set_pos_cancel_instance = SetPosCancelation.objects.create(
+                customer=customer,
+                discount=discount_value,
+                total_subtotal=total_subtotal,
+                total_with_discount=total_with_discount,
+                status=status,
+                invoice_by=request.user.username
+                # You may need to adjust other fields here based on your model requirements
+            )
+
+            # Save products without enforcing uniqueness
+            products = []
+            for product_data in products_array:
+                product = InvoiceProduct.objects.create(**product_data)
+                products.append(product)
+
+            # Set the products for the SetPosCancelation instance
+            set_pos_cancel_instance.products.set(products)
+
+            # Generate PDF for product details including customer details
+            if status == "draft":
+                status = "Draft Invoice"
+            elif status == "credit_sale":
+                status = "Credit Sale Invoice"
+            elif status == "quotation":
+                status = "Quotation Invoice"
+            elif status == "cash":
+                status = "Cash Invoice"
+
+            product_pdf_content = generate_product_pdf(customer, products, set_pos_cancel_instance.id, discount_value,
+                                                       total_subtotal, total_with_discount, status)
+
+            # Save the PDF file
+            pdf_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
+            os.makedirs(pdf_dir, exist_ok=True)
+            pdf_path = os.path.join(pdf_dir, f'product_details_{set_pos_cancel_instance.id}.pdf')
+            with open(pdf_path, 'wb') as pdf_file:
+                pdf_file.write(product_pdf_content)
+
+            # Open the PDF file
+            subprocess.run(['start', '', pdf_path], shell=True)
+
+            # Include a success message and PDF URL in the JSON response
+            return JsonResponse({'message': 'Data saved successfully', 'pdf_url': pdf_path})
+        except Exception as e:
+            return JsonResponse({'message': f'Error: {str(e)}'}, status=500)
+    else:
+        return JsonResponse({'message': 'Invalid request method'}, status=400)
+
 
 
 class ProductDetailsNameView(View):
@@ -482,7 +702,7 @@ class ProductDetailsNameView(View):
         try:
             product = Product.objects.get(name=name)
             product_data = {
-                'item' : product.item.name,
+            
                 'id': product.id,
                 'name': product.name,
                 'sku': product.sku,
@@ -559,9 +779,18 @@ class PartyListView(View):
 
 class NewPurchase(View):
     def get(self, request):
-        return render(request, 'ERP/new_purchase_add.html')
-    
+        partyform = PartyListForm()
+        return render(request, 'ERP/new_purchase_add.html', {'partyform': partyform})
 
+    def post(self, request):
+        partyform = PartyListForm(request.POST)
+        if partyform.is_valid():
+            partyform = partyform.save()
+            messages.success(request, 'Vendor saved successfully!')
+            return redirect('new_purchase_list')  # Replace 'your_redirect_view_name' with the actual name or URL of the view you want to redirect to
+        else:
+            messages.error(request, 'Error saving vendor. Please check the form.')
+        return render(request, 'ERP/new_purchase_add.html', {'partyform': partyform})
 
 
 @csrf_exempt
@@ -611,6 +840,9 @@ def save_invoice_purchase(request):
             set_pos_instance.products.set(products)
             set_pos_id = set_pos_instance
             # Generate PDF for product details including customer details
+
+
+            
             if(status == "quatation"):
                 status = "QUATATION"
                 product_pdf_content = generate_purchase_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status, description)
@@ -619,7 +851,7 @@ def save_invoice_purchase(request):
                 product_pdf_content = generate_purchase_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status, description)
 
                 
-                
+              
             # Save the PDF file
             pdf_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
             os.makedirs(pdf_dir, exist_ok=True)
@@ -696,28 +928,52 @@ class PurchaseListView(View):
 
     def get(self, request):
         # Get the value of the 'status' parameter from the URL
-        status = request.GET.get('status', 'Pending')
+        status_filter = request.GET.get('status', 'Pending')
 
         # Get the selected number of items per page from the URL
         items_per_page = int(request.GET.get('items_per_page', self.default_items_per_page))
 
-        setpos = SetPosPurchase.objects.all()
+        setpos_purchase = SetPosPurchase.objects.all()
 
         # Pagination
-        paginator = Paginator(setpos, items_per_page)
+        paginator = Paginator(setpos_purchase, items_per_page)
         page = request.GET.get('page', 1)
 
         try:
-            setpos_page = paginator.page(page)
+            setpos_purchase_page = paginator.page(page)
         except PageNotAnInteger:
             # If page is not an integer, deliver the first page
-            setpos_page = paginator.page(1)
+            setpos_purchase_page = paginator.page(1)
         except EmptyPage:
             # If page is out of range (e.g., 9999), deliver the last page
-            setpos_page = paginator.page(paginator.num_pages)
+            setpos_purchase_page = paginator.page(paginator.num_pages)
 
-        return render(request, self.template_name, {'pos_page': setpos_page, 'items_per_page': items_per_page})
+        # Create an instance of the VoucherForm
+        form = VoucherForm()
 
+        return render(request, self.template_name, {'pos_page': setpos_purchase_page, 'status_filter': status_filter, 'items_per_page': items_per_page, 'form': form})
+
+    def post(self, request):
+        form = VoucherForm(request.POST)
+        if form.is_valid():
+            # Save the form data to the Voucher model
+            form.instance.type = 'Receive'
+            # Save the form data to the Voucher model
+            voucher = form.save()
+            # Get the associated purchasepos
+            purchasepos = voucher.purchasepos
+
+            # Update SetPosPurchase data using Decimal values
+            purchasepos.paid_amount += float(voucher.amount)
+            purchasepos.due_amount = float(purchasepos.total_with_discount) - float(purchasepos.paid_amount)
+            purchasepos.save()
+
+            # You might want to do additional processing or redirect to another page
+            # Replace 'success_page' with the URL name or path you want to redirect to
+            return redirect(f'http://127.0.0.1:8000/purchaselist/?status={purchasepos.status}')
+
+        # If the form is not valid, render the template with the form and other data
+        return render(request, self.template_name, {'form': form, 'status_filter': 'Pending'})
 
 
 @csrf_exempt  # Use this decorator for simplicity. In production, implement proper CSRF protection.
@@ -941,6 +1197,67 @@ def delete_pos_purchase(request):
         return JsonResponse(response_data, status=500)
 
 
+@require_POST
+def delete_invoice_transaction(request):
+    try:
+        pos_id = request.POST.get('posId')
+        pos_instance = SetPos.objects.get(id=pos_id)
+
+        # Create an instance of SetPosCancelation and copy data
+        with transaction.atomic():
+            cancel_instance = SetPosCancelation(
+                customer=pos_instance.customer,
+                discount=pos_instance.discount,
+                total_subtotal=pos_instance.total_subtotal,
+                total_with_discount=pos_instance.total_with_discount,
+                paid_amount=pos_instance.paid_amount,
+                due_amount=pos_instance.due_amount,
+                status=pos_instance.status,
+                order_sheet=pos_instance.order_sheet,
+                invoice_date=pos_instance.invoice_date,
+                delivery_date=pos_instance.delivery_date,
+                delivery_status=pos_instance.delivery_status,
+                invoice_by=pos_instance.invoice_by,
+                systemname=pos_instance.systemname,
+            )
+            cancel_instance.save()
+
+            # Add the products to the cancel_instance
+            cancel_instance.products.set(pos_instance.products.all())
+
+        # Now you can delete the original SetPos instance
+        pos_instance.delete()
+
+        response_data = {'message': 'Record deleted and saved successfully'}
+        return JsonResponse(response_data, status=200)
+    
+    except SetPos.DoesNotExist:
+        response_data = {'message': 'Record not found'}
+        return JsonResponse(response_data, status=404)
+    
+    except Exception as e:
+        response_data = {'message': str(e)}
+        return JsonResponse(response_data, status=500)
+
+
+
+@require_POST
+def delete_invoice_transacrtion_cancel(request):
+    try:
+        pos_id = request.POST.get('posId')
+        pos_instance = SetPosCancelation.objects.get(id=pos_id)
+        pos_instance.delete()
+        response_data = {'message': 'Record deleted and saved successfully'}
+        return JsonResponse(response_data, status=200)
+    
+    except SetPosCancelation.DoesNotExist:
+        response_data = {'message': 'Record not found'}
+        return JsonResponse(response_data, status=404)
+    
+    except Exception as e:
+        response_data = {'message': str(e)}
+        return JsonResponse(response_data, status=500)
+
 
 
 def create_or_update_customer(request, customer_id=None):
@@ -1034,48 +1351,11 @@ def delete_party(request, party_id):
 
     
 
-def create_or_update_item(request, item_id=None):
-    if item_id:
-        item = get_object_or_404(ItemName, id=item_id)
-        success_message = 'Item successfully updated.'
-    else:
-        item = ItemName()
-        success_message = 'Item successfully saved.'
-
-    if request.method == 'POST':
-        form = ItemNameForm(request.POST, instance=item)
-        if form.is_valid():
-            form.save()
-            messages.success(request, success_message)
-            return redirect('item_list')
-    else:
-        form = ItemNameForm(instance=item)
-
-    return render(request, 'ERP/itemadd.html', {'form': form, 'item': item})
 
 
-def item_list(request):
-    items_per_page = int(request.GET.get('items_per_page', 10))  # Default to 10 items per page
-    item = ItemName.objects.all()
-
-    paginator = Paginator(item, items_per_page)
-    page = request.GET.get('page')
-
-    try:
-        item = paginator.page(page)
-    except PageNotAnInteger:
-        # If page is not an integer, deliver the first page.
-        item = paginator.page(1)
-    except EmptyPage:
-        # If page is out of range (e.g., 9999), deliver the last page of results.
-        item = paginator.page(paginator.num_pages)
-    return render(request, 'ERP/item_list.html', {'item': item, 'items_per_page': items_per_page})
 
 
-def delete_item(request, item_id):
-    item = get_object_or_404(ItemName, id=item_id)
-    item.delete()
-    return redirect('item_list')
+
 
 
 
@@ -1161,3 +1441,158 @@ def delete_employee(request, employee_id):
     employee = get_object_or_404(Employee, id=employee_id)
     employee.delete()
     return redirect('employee_list')
+
+
+
+
+
+def create_or_update_voucher(request, voucher_id=None):
+    if voucher_id:
+        voucher = get_object_or_404(Voucher, id=voucher_id)
+    else:
+        voucher = Voucher()
+    if request.method == 'POST':
+        form = VoucherForm(request.POST, instance=voucher)
+        if form.is_valid():
+            form.save()
+            return redirect('voucher_list')
+    else:
+        form = VoucherForm(instance=voucher)
+    
+    return render(request, 'ERP/voucherlistadd.html', {'form': form, 'voucher': voucher})
+
+
+def voucher_list(request):
+    items_per_page = int(request.GET.get('items_per_page', 10))  # Default to 10 items per page
+    voucher = Voucher.objects.all()
+    
+    paginator = Paginator(voucher, items_per_page)
+    page = request.GET.get('page')
+
+    try:
+        voucher = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver the first page.
+        voucher = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g., 9999), deliver the last page of results.
+        voucher = paginator.page(paginator.num_pages)
+    return render(request, 'ERP/voucher_list.html', {'vouchers': voucher, 'items_per_page': items_per_page})
+
+
+def delete_voucher(request, voucher_id):
+    voucher = get_object_or_404(Voucher, id=voucher_id)
+    voucher.delete()
+    return redirect('voucher_list')
+
+
+
+def customer_details_account(request, customer_id):
+    items_per_page = int(request.GET.get('items_per_page', 10))  # Default to 10 items per page
+    customer = get_object_or_404(CustomerList, id=customer_id)
+    
+    # Get all POS records for the employee
+    pos_list = SetPos.objects.filter(customer=customer)
+    
+    paginator = Paginator(pos_list, items_per_page)
+    page = request.GET.get('page')  
+
+    try:
+        pos_records = paginator.page(page)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver the first page.
+        pos_records = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g., 9999), deliver the last page of results.
+        pos_records = paginator.page(paginator.num_pages)
+    
+    return render(request, 'ERP/customer_details_account.html', {'customers': pos_list, 'pos_records': pos_records, 'items_per_page': items_per_page})
+
+
+
+class CancelTransactionView(View):
+    template_name = 'ERP/allcancelinvoice.html'
+    items_per_page = 10  # Set the default number of items per page
+
+    def get(self, request):
+        # Get the value of the 'status' parameter from the URL
+        status_filter = request.GET.get('status', 'draft')  # Set default value to 'draft'
+        # Get the value of the 'items_per_page' parameter from the URL
+        items_per_page = request.GET.get('items_per_page', self.items_per_page)
+        # Filter SetPos objects based on the status parameter
+        if status_filter:
+            setpos = SetPosCancelation.objects.filter(status=status_filter)
+        else:
+            # If no status parameter provided, show all transactions
+            setpos = SetPosCancelation.objects.all()
+        # Pagination
+        paginator = Paginator(setpos, items_per_page)
+        page = request.GET.get('page', 1)
+        try:
+            setpos_page = paginator.page(page)
+        except PageNotAnInteger:
+            # If page is not an integer, deliver the first page
+            setpos_page = paginator.page(1)
+        except EmptyPage:
+            # If page is out of range (e.g., 9999), deliver the last page
+            setpos_page = paginator.page(paginator.num_pages)
+        return render(request, self.template_name, {'pos_page': setpos_page, 'status_filter': status_filter, 'items_per_page': int(items_per_page)})
+
+   
+
+
+# def get_product_details(request, product_id):
+#     product = get_object_or_404(Product, id=product_id)
+#     data = {
+#         'name': product.name,
+#         'sku': product.sku,
+#         # Add other product details as needed
+#     }
+#     return JsonResponse(data)
+
+
+# def generate_barcode(barcode_data, filename):
+#     # Generate barcode
+#     code = Code128(barcode_data, writer=ImageWriter())
+#     code.save(filename)
+
+# def generate_pdf_with_barcode(barcode_data, pdf_filename, barcode_filename):
+#     # Get the absolute path to the image file using BASE_DIR
+#     image_path = os.path.normpath(os.path.join(settings.BASE_DIR, barcode_filename))
+
+#     # Create PDF
+#     c = canvas.Canvas(pdf_filename, pagesize=letter)
+#     width, height = letter
+
+#     # Draw barcode on PDF
+#     barcode_width = 200
+#     barcode_height = 100
+#     c.drawInlineImage(image_path, (width - barcode_width) / 2, height - 150, width=barcode_width, height=barcode_height)
+
+#     # Add additional content or text if needed
+#     c.drawString(100, height - 200, "Barcode Data: {}".format(barcode_data))
+
+#     # Save PDF
+#     c.save()
+
+# def generate_barcode_view(request, product_id):
+#     # Get the barcode data based on the product_id
+#     # Replace the following line with your actual logic to get barcode data
+#     barcode_data = f"123456789-{product_id}"
+
+#     barcode_filename = f"barcode_{product_id}.png"
+#     pdf_filename = f"output_{product_id}.pdf"
+
+#     # Generate barcode and PDF
+#     generate_barcode(barcode_data, barcode_filename)
+#     generate_pdf_with_barcode(barcode_data, pdf_filename, barcode_filename)
+
+#     # Serve the PDF file for download
+#     with open(pdf_filename, 'rb') as pdf_file:
+#         response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+#         response['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
+#     return response
+
+
+    
+

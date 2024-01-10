@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, CustomerList, ActivityLog, Product, ItemName,SetPos,InvoiceProduct,PartyList, SetPosPurchase, Employee, PaymentMethodname, Voucher
+from .models import CustomUser, CustomerList, ActivityLog, Product,SetPos,InvoiceProduct,PartyList, SetPosPurchase, Employee, PaymentMethodname, Voucher,Account, SetPosCancelation
 
 from import_export.admin import ImportExportModelAdmin
 
-
+from import_export import resources
 
 admin.site.site_header = 'Gulf House Group'
 
@@ -59,7 +59,7 @@ class CustomerListAdmin(ImportExportModelAdmin):
 @admin.register(Product)
 class ProductAdmin(ImportExportModelAdmin):
     list_display = (
-        'item','sku', 'name', 'uom', 'vendor', 'brand', 'category', 'sub_category', 'product_type',
+        'sku', 'name', 'uom', 'vendor', 'brand', 'category', 'sub_category', 'product_type',
         'variation_name', 'variation_values', 'barcode_type', 'alert_quantity', 'lead_time',
         'reorder_quantity', 'reorder_date', 'expires_in', 'tax', 'purchase_price',
         'transport_cost', 'other_cost', 'cogs', 'profit_margin_base_seeling','profit_margin_mrp', 'base_selling_price',
@@ -72,7 +72,7 @@ class ProductAdmin(ImportExportModelAdmin):
 
     fieldsets = (
         ('Basic Information', {
-            'fields': ('item','name', 'sku', 'uom', 'vendor', 'brand', 'category', 'sub_category', 'product_type',
+            'fields': ('name', 'sku', 'uom', 'vendor', 'brand', 'category', 'sub_category', 'product_type',
                        'variation_name', 'variation_values', 'barcode_type'),
         }),
         ('Inventory Information', {
@@ -102,17 +102,25 @@ class ProductAdmin(ImportExportModelAdmin):
         return []
 
 
-@admin.register(ItemName)
-class ItemnameAdmin(ImportExportModelAdmin):
-    pass
 
-@admin.register(SetPos)
+class SetPosResource(resources.ModelResource):
+    class Meta:
+        model = SetPos
+
 class SetPosAdmin(ImportExportModelAdmin):
-    pass
+    resource_class = SetPosResource
+    list_display = ('customer', 'discount', 'total_subtotal', 'total_with_discount', 'paid_amount', 'due_amount', 'status', 'order_sheet', 'invoice_date', 'delivery_date', 'delivery_status', 'invoice_by', 'systemname')
+    list_filter = ('status', 'delivery_status', 'invoice_by')
+    search_fields = ['customer__Debtors_Name']  # Assuming Debtors_Name is a field in the CustomerList model
+
+admin.site.register(SetPos, SetPosAdmin)
+
 
 @admin.register(SetPosPurchase)
 class SetPosPurchaseadmin(ImportExportModelAdmin):
     pass
+
+
 
 
 @admin.register(InvoiceProduct)
@@ -157,6 +165,8 @@ class PaymentMethodnameAdmin(ImportExportModelAdmin):
     search_fields = ('name', 'description', 'info_status')
 
 
+
+
 @admin.register(Voucher)
 class VoucherAdmin(ImportExportModelAdmin):
     list_display = ('vouchernumber', 'amount', 'payment_status', 'description', 'date')
@@ -166,4 +176,23 @@ class VoucherAdmin(ImportExportModelAdmin):
     ordering = ('-date',)
 
     # Customize the display of the ForeignKey fields
-    raw_id_fields = ('salepos', 'purchasepos', 'account_info')
+ 
+
+@admin.register(Account)
+class AccountAdmin(ImportExportModelAdmin):
+
+    pass
+
+
+class SetPosCancelationAdmin(ImportExportModelAdmin):
+    list_display = ('customer', 'discount', 'total_subtotal', 'total_with_discount',
+                    'paid_amount', 'due_amount', 'status', 'order_sheet',
+                    'invoice_date', 'delivery_date', 'delivery_status',
+                    'invoice_by', 'systemname', 'your_datetime_field')
+
+    list_filter = ('status', 'delivery_status', 'invoice_by')
+    search_fields = ('customer__name', 'order_sheet', 'systemname')
+
+    
+
+admin.site.register(SetPosCancelation, SetPosCancelationAdmin)
