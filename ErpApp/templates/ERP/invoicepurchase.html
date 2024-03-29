@@ -46,8 +46,8 @@
                         <td style="text-align:center; padding:5px">{{ product.name }}</td>
                         <td style="text-align:center; padding:5px">{{ product.unit }}</td>
                         <td style="text-align:center; padding:5px">{{ product.quantity }}</td>
-                        <td style="text-align:center; padding:5px">{{ product.unit_cost }}</td>
-                        <td style="text-align:center; padding:5px">{{ product.subtotal }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.unit_cost|floatformat:2 }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.subtotal|floatformat:2 }}</td>
                     </tr>
                 {% endfor %}
             </tbody>

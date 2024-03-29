@@ -37,24 +37,7 @@
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 
 
-    <div class="items-per-page w-25">
-        <label for="itemsPerPage">Items Per Page:</label>
-        <select id="itemsPerPage" class="form-control">
-            <option value="10" {% if items_per_page == 10 %}selected{% endif %}>10</option>
-            <option value="20" {% if items_per_page == 20 %}selected{% endif %}>20</option>
-            <option value="30" {% if items_per_page == 30 %}selected{% endif %}>30</option>
-            <option value="40" {% if items_per_page == 40 %}selected{% endif %}>40</option>
-            <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
-            <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
-            <option value="200" {% if items_per_page == 200 %}selected{% endif %}>200</option>
-            <option value="300" {% if items_per_page == 300 %}selected{% endif %}>300</option>
-            <option value="400" {% if items_per_page == 300 %}selected{% endif %}>400</option>
-            <option value="500" {% if items_per_page == 500 %}selected{% endif %}>500</option>
-            <option value="1000" {% if items_per_page == 1000 %}selected{% endif %}>1000</option>
-
-            <!-- Add other options as needed -->
-        </select>
-    </div>
+{% include "ERP/itempage.html" %}
 
 <div class="searchview">
     <input type="text" id="searchInput" class="form-control" placeholder="Search by Customer Name">

@@ -420,12 +420,12 @@
 
     function saveInvoice(status) {
         // Get the customer details
-        const description = document.getElementById('description').textContent;
+        const description = document.getElementById('description').value;
         const customerDetails = document.getElementById('customerDetails').textContent.trim();
         const totalSubtotal = parseFloat(document.getElementById('totalSubtotal').textContent) || 0;
         const totalWithDiscount = parseFloat(document.getElementById('totalSubtotal').textContent) || 0;;
         const discountValue = 1;
-        
+        console.log(description);
         // Get all table rows
         const tableRows = document.getElementById('productTable').getElementsByTagName('tr');
         // Create an array to store product details

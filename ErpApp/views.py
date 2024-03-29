@@ -7,7 +7,7 @@ from django.http import JsonResponse
 import json
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
-from .models import ActivityLog,CustomerList,Product, SetPos, InvoiceProduct,  PartyList, SetPosPurchase, Employee, Voucher, Account, SetPosCancelation
+from .models import ActivityLog,CustomerList,Product, SetPos, InvoiceProduct,  PartyList, SetPosPurchase, Employee, Voucher, Account, SetPosCancelation, DeleveryAdd
 from django.views.decorators.csrf import csrf_exempt
 import os
 from django.conf import settings
@@ -33,6 +33,8 @@ from django.conf import settings
 from io import BytesIO
 from django.db.models import Sum
 from django.db import transaction
+from datetime import datetime
+from django.utils import timezone
 class LoginView(View):
     def get(self, request):
         return render(request, 'login/login.html')
@@ -95,7 +97,8 @@ class NewInvoice(View):
             messages.error(request, 'Error saving customer. Please check the form.')
         
         return render(request, 'ERP/new_invoice_add.html', {'customerform': customerform})
-    
+
+
 
 class ProductDetailsView(View):
     def get(self, request, id):
@@ -153,6 +156,7 @@ def save_invoice(request):
             # Parse JSON data from the request body
             data = json.loads(request.body)
             customer_id = data.get('customerId')
+            description = data.get('description')
             discount_value = data.get('discountValue', None)
             products_array = data.get('productsArray')
             total_subtotal = data.get('totalSubtotal')
@@ -171,9 +175,6 @@ def save_invoice(request):
 
             # Save products without enforcing uniqueness
             products = []
-            for product_data in products_array:
-                product = InvoiceProduct.objects.create(**product_data)
-                products.append(product)
 
             # Create SetPos instance and save
             set_pos_instance = SetPos.objects.create(
@@ -182,14 +183,29 @@ def save_invoice(request):
                 total_subtotal=total_subtotal,
                 total_with_discount=total_with_discount,
                 status=status,
+                description=description,
                 invoice_by=request.user.username
             )
 
+            for product_data in products_array:
+                my_product = Product.objects.get(name=product_data['name'])
+                new_stock = my_product.opening_stock - product_data['quantity']
+                my_product.opening_stock = new_stock  # Update opening stock
+                my_product.save()  # Save the updated product
+
+                # Create InvoiceProduct instance
+                product = InvoiceProduct.objects.create(**product_data)
+
+                # Set so_number for the created InvoiceProduct
+                product.so_number = {set_pos_instance.id}  # Replace "your_value_here" with the actual value you want to set
+                product.save()
+
+                products.append(product)
+
+            # Set the products for the SetPos instance
             set_pos_instance.products.set(products)
             set_pos_id = set_pos_instance
 
-          
-            
             # Generate PDF for product details including customer details
             if status == "draft":
                 status = "Draft Invoice"
@@ -203,7 +219,6 @@ def save_invoice(request):
             product_pdf_content = generate_product_pdf(customer, products, set_pos_id, discount_value, total_subtotal,
                                                        total_with_discount, status)
 
-
             account = Account.objects.create(invoice_id_view=set_pos_instance, invoice_sale_now=total_with_discount)
             account.save()
 
@@ -215,7 +230,6 @@ def save_invoice(request):
                 pdf_file.write(product_pdf_content)
 
             # Update total_sale in the Account model
-            
 
             # Open the PDF file
             subprocess.run(['start', '', pdf_path], shell=True)
@@ -226,6 +240,7 @@ def save_invoice(request):
             return JsonResponse({'message': f'Error: {str(e)}'}, status=500)
     else:
         return JsonResponse({'message': 'Invalid request method'}, status=400)
+
 
 
 class Salecancel_view(View):
@@ -375,6 +390,68 @@ def generate_return_invoice_pdf(request):
         return JsonResponse({'message': 'Invalid request method'}, status=400)
 
 
+
+
+@csrf_exempt
+def generate_return_delivery_invoice_pdf(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+            customer_id = data.get('customerId')
+            discount_value = data.get('discountValue', None)
+            products_array = data.get('productsArray')
+            total_subtotal = data.get('totalSubtotal')
+            total_with_discount = data.get('totalWithDiscount')
+            posid = data.get('posid')
+            
+            set_pos_instannce = DeleveryAdd.objects.get(id=posid)
+
+            # Validate required fields
+            if not customer_id  or not products_array or not total_subtotal or not total_with_discount:
+                return JsonResponse({'message': 'Incomplete data in the request'}, status=400)
+                
+            # Save customer details
+            try:
+                customer = CustomerList.objects.get(id=customer_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({'message': 'Customer does not exist'}, status=400)
+
+            # Save products without enforcing uniqueness
+            products = []
+            for product_data in products_array:
+                product = InvoiceProduct.objects.create(**product_data)
+                products.append(product)
+
+           
+
+            # Create SetPos instance and save
+            
+            set_pos_instance = set_pos_instannce
+            status = set_pos_instance.status
+            set_pos_id = set_pos_instance
+            # Generate PDF for product details including customer details
+            
+            product_pdf_content = generate_product_pdf(customer, products,set_pos_id, discount_value, total_subtotal, total_with_discount, status)
+            
+            # Save the PDF file
+            pdf_dir = os.path.join(settings.MEDIA_ROOT, 'invoices')
+            os.makedirs(pdf_dir, exist_ok=True)
+            pdf_path = os.path.join(pdf_dir, f'product_details_{set_pos_id.id}.pdf')
+            with open(pdf_path, 'wb') as pdf_file:
+                pdf_file.write(product_pdf_content)
+
+            # Open the PDF file
+            subprocess.run(['start', '', pdf_path], shell=True)
+
+            # Include a success message and PDF URL in the JSON response
+            return JsonResponse({'message': 'Data saved successfully', 'pdf_url': pdf_path})
+        except Exception as e:
+            return JsonResponse({'message': f'Error: {str(e)}'}, status=500)
+    else:
+        return JsonResponse({'message': 'Invalid request method'}, status=400)
+
+
 def generate_product_pdf(customer, products, set_pos_id, discount_value, total_subtotal, total_with_discount, status):
     # Prepare data for the PDF template
     total_with_discount = float(total_with_discount)
@@ -437,7 +514,7 @@ class TransactionView(View):
 
         # Filter SetPos objects based on the status parameter
         if status_filter:
-            setpos = SetPos.objects.filter(status=status_filter)
+            setpos = SetPos.objects.filter(status=status_filter).order_by('-invoice_date')
         else:
             # If no status parameter provided, show all transactions
             setpos = SetPos.objects.all()
@@ -472,15 +549,21 @@ class TransactionView(View):
             # Update SetPos data using Decimal values
             salepos.paid_amount += float(voucher.amount)
             salepos.due_amount = float(salepos.total_with_discount) - float(salepos.paid_amount)
+
+            # Check if due_amount is negative
+            if salepos.due_amount < 0:
+                messages.error(request, "Error: Paid amount is greater than subtotal.")
+                return redirect(f'http://127.0.0.1:8000/transaction/?status={salepos.status}')
+
             salepos.save()
 
             # You might want to do additional processing or redirect to another page
             # Replace 'success_page' with the URL name or path you want to redirect to
             return redirect(f'http://127.0.0.1:8000/transaction/?status={salepos.status}')
-                # You might want to do additional processing or redirect to another page
 
-            # If the form is not valid, render the template with the form and other data
+        # If the form is not valid, render the template with the form and other data
         return render(request, self.template_name, {'form': form, 'status_filter': 'draft'})
+
 
 
 class EditInvoiceView(View):
@@ -506,6 +589,43 @@ class EditInvoiceView(View):
             return JsonResponse({'error': str(e)}, status=500)
 
 
+class DeliveryInvoiceView(View):
+    def get(self, request):
+        try:
+            # Get JSON data from the query parameters
+            data = json.loads(request.GET.get('allRowsData', '[]'))
+
+            # Prepare context for the template
+            context = {
+                'allRowsData': data,
+          
+            }
+            
+            # Render the template with the context data
+            return render(request, 'ERP/deliveryadd.html', context)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+
+class DeliveryPurchaseInvoiceView(View):
+    def get(self, request):
+        try:
+            # Get JSON data from the query parameters
+            data = json.loads(request.GET.get('allRowsData', '[]'))
+            # Prepare context for the template
+            context = {
+                'allRowsData': data,
+            }
+            # Render the template with the context data
+            return render(request, 'ERP/deliveraddpurchase.html', context)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
 class EditRetunView(View):
     def get(self, request):
@@ -647,6 +767,7 @@ def return_save_invoice(request):
             
             # Create a new SetPosCancelation instance
             set_pos_cancel_instance = SetPosCancelation.objects.create(
+                
                 customer=customer,
                 discount=discount_value,
                 total_subtotal=total_subtotal,
@@ -702,7 +823,6 @@ class ProductDetailsNameView(View):
         try:
             product = Product.objects.get(name=name)
             product_data = {
-            
                 'id': product.id,
                 'name': product.name,
                 'sku': product.sku,
@@ -820,8 +940,16 @@ def save_invoice_purchase(request):
             # Save products without enforcing uniqueness
             products = []
             for product_data in products_array:
-                product = InvoiceProduct.objects.create(**product_data)
-                products.append(product)
+                my_product = Product.objects.get(name=product_data['name'])
+                
+                new_stock = my_product.opening_stock + product_data['quantity']
+                if new_stock > 0:
+                    my_product.opening_stock = new_stock  # Update opening stock
+                    my_product.save()  # Save the updated product
+                    product = InvoiceProduct.objects.create(**product_data)
+                    products.append(product)
+                else:
+                     return JsonResponse({'message': 'You Have No Stock'})
 
            
 
@@ -933,8 +1061,8 @@ class PurchaseListView(View):
         # Get the selected number of items per page from the URL
         items_per_page = int(request.GET.get('items_per_page', self.default_items_per_page))
 
-        setpos_purchase = SetPosPurchase.objects.all()
-
+        setpos_purchase = SetPosPurchase.objects.all().order_by("-invoice_date")
+        
         # Pagination
         paginator = Paginator(setpos_purchase, items_per_page)
         page = request.GET.get('page', 1)
@@ -1120,7 +1248,7 @@ def update_save_invoice_purchase(request):
                 customer = CustomerList.objects.get(id=customer_id)
             except ObjectDoesNotExist:
                 return JsonResponse({'message': 'Customer does not exist'}, status=400)
-
+            
             # Check if an existing SetPos instance matches the criteria for update
             existing_set_pos_instance = SetPosPurchase.objects.filter(id=posid).first()
             description = existing_set_pos_instance.description
@@ -1258,6 +1386,22 @@ def delete_invoice_transacrtion_cancel(request):
         response_data = {'message': str(e)}
         return JsonResponse(response_data, status=500)
 
+
+@require_POST
+def delete_delivery_product(request):
+    try:
+        pos_id = request.POST.get('posId')
+        pos_instance = DeleveryAdd.objects.get(id=pos_id)
+        pos_instance.delete()
+        response_data = {'message': 'Record deleted and saved successfully'}
+        return JsonResponse(response_data, status=200)
+    
+    except DeleveryAdd.DoesNotExist:
+        response_data = {'message': 'Record not found'}
+        return JsonResponse(response_data, status=404)
+    except Exception as e:
+        response_data = {'message': str(e)}
+        return JsonResponse(response_data, status=500)
 
 
 def create_or_update_customer(request, customer_id=None):
@@ -1539,6 +1683,263 @@ class CancelTransactionView(View):
         return render(request, self.template_name, {'pos_page': setpos_page, 'status_filter': status_filter, 'items_per_page': int(items_per_page)})
 
    
+
+class DeliveryshowView(View):
+    template_name = 'ERP/deliveryshowalldetails.html'
+    items_per_page = 10  # Set the default number of items per page
+
+    def get(self, request):
+        # Get the value of the 'status' parameter from the URL
+       
+        # Get the value of the 'items_per_page' parameter from the URL
+        items_per_page = request.GET.get('items_per_page', self.items_per_page)
+        # Filter SetPos objects based on the status parameter
+        
+        setpos = DeleveryAdd.objects.all().order_by("-invoice_date")
+        # Pagination
+        paginator = Paginator(setpos, items_per_page)
+        page = request.GET.get('page', 1)
+        try:
+            setpos_page = paginator.page(page)
+        except PageNotAnInteger:
+            # If page is not an integer, deliver the first page
+            setpos_page = paginator.page(1)
+        except EmptyPage:
+            # If page is out of range (e.g., 9999), deliver the last page
+            setpos_page = paginator.page(paginator.num_pages)
+        return render(request, self.template_name, {'pos_page': setpos_page,  'items_per_page': int(items_per_page)})
+
+
+class PurchaseDeliveryshowView(View):
+    template_name = 'ERP/purchasedeliveryshow.html'
+    items_per_page = 10  # Set the default number of items per page
+
+    def get(self, request):
+        # Get the value of the 'status' parameter from the URL
+       
+        # Get the value of the 'items_per_page' parameter from the URL
+        items_per_page = request.GET.get('items_per_page', self.items_per_page)
+        # Filter SetPos objects based on the status parameter
+        
+        setpos = DeleveryAdd.objects.all().order_by("-invoice_date")
+        # Pagination
+        paginator = Paginator(setpos, items_per_page)
+        page = request.GET.get('page', 1)
+        try:
+            setpos_page = paginator.page(page)
+        except PageNotAnInteger:
+            # If page is not an integer, deliver the first page
+            setpos_page = paginator.page(1)
+        except EmptyPage:
+            # If page is out of range (e.g., 9999), deliver the last page
+            setpos_page = paginator.page(paginator.num_pages)
+        return render(request, self.template_name, {'pos_page': setpos_page,  'items_per_page': int(items_per_page)})
+
+
+
+
+
+
+
+@csrf_exempt
+def delivery_invoice(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+            posid = data.get('posid')
+            description = data.get('description')
+            customer_id = data.get('customerId')
+            discount_value = data.get('discountValue', None)
+            products_array = data.get('productsArray')
+            total_subtotal = data.get('totalSubtotal')
+            total_with_discount = data.get('totalWithDiscount')
+            status = data.get('status', 'pending')  # Default to 'draft' if status is not provided
+            posid_instannce = SetPos.objects.get(id=posid)
+            
+            
+            # Validate required fields
+            if not posid or not customer_id or not products_array or not total_subtotal or not total_with_discount:
+                return JsonResponse({'message': 'Incomplete data in the request'}, status=400)
+
+            # Save customer details
+            try:
+                customer = CustomerList.objects.get(id=customer_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({'message': 'Customer does not exist'}, status=400)
+            
+            # Create a new DeleveryAdd instance
+            set_pos_cancel_instance = DeleveryAdd.objects.create(
+                pos_id=posid_instannce,
+                customer=customer,
+                discount=discount_value,
+                total_subtotal=total_subtotal,
+                total_with_discount=total_with_discount,
+                status=status,
+                description = description,
+                invoice_by=request.user.username
+                # You may need to adjust other fields here based on your model requirements
+            )
+            
+            # Save products without enforcing uniqueness
+            products = []
+            for product_data in products_array:
+                product = InvoiceProduct.objects.create(**product_data)
+                products.append(product)
+
+            # Set the products for the DeleveryAdd instance
+            set_pos_cancel_instance.products.set(products)
+
+            messages.success(request, 'Delivery Added saved successfully!')
+            # Add success message to the response
+            return redirect("delivery_add")
+        except Exception as e:
+            return JsonResponse({'message': f'Error: {str(e)}'}, status=500)
+    else:
+        return JsonResponse({'message': 'Invalid request method'}, status=400)
+
+
+@csrf_exempt
+def delivery_invoice_purchase(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+            posid = data.get('posid')
+            description = data.get('description')
+            customer_id = data.get('customerId')
+            discount_value = data.get('discountValue', None)
+            products_array = data.get('productsArray')
+            total_subtotal = data.get('totalSubtotal')
+            total_with_discount = data.get('totalWithDiscount')
+            status = data.get('status', 'pending')  # Default to 'draft' if status is not provided
+            posid_instannce = SetPosPurchase.objects.get(id=posid)
+            
+            
+            # Validate required fields
+            if not posid or not customer_id or not products_array or not total_subtotal or not total_with_discount:
+                return JsonResponse({'message': 'Incomplete data in the request'}, status=400)
+
+            # Save customer details
+            try:
+                customer = CustomerList.objects.get(id=customer_id)
+            except ObjectDoesNotExist:
+                return JsonResponse({'message': 'Customer does not exist'}, status=400)
+            
+            # Create a new DeleveryAdd instance
+            set_pos_cancel_instance = DeleveryAdd.objects.create(
+                purchase_id=posid_instannce,
+                customer=customer,
+                discount=discount_value,
+                total_subtotal=total_subtotal,
+                total_with_discount=total_with_discount,
+                status=status,
+                description = description,
+                invoice_by=request.user.username
+                # You may need to adjust other fields here based on your model requirements
+            )
+            
+            # Save products without enforcing uniqueness
+            products = []
+            for product_data in products_array:
+                product = InvoiceProduct.objects.create(**product_data)
+                products.append(product)
+
+            # Set the products for the DeleveryAdd instance
+            set_pos_cancel_instance.products.set(products)
+
+            messages.success(request, 'Delivery Added saved successfully!')
+            # Add success message to the response
+            return redirect("delivery_add_purchase")
+        except Exception as e:
+            return JsonResponse({'message': f'Error: {str(e)}'}, status=500)
+    else:
+        return JsonResponse({'message': 'Invalid request method'}, status=400)
+        
+
+class ProductLedgerView(View):
+    def get(self, request):
+        return render(request, 'ERP/productledger.html')
+
+    def post(self, request):
+        product_name = request.POST.get('product_name')
+        from_date = request.POST.get('from_date')
+        to_date = request.POST.get('to_date')
+
+        # Initialize the queryset
+        invoice_product = InvoiceProduct.objects.all()
+
+        # Apply filters based on user inputs
+        if product_name:
+            invoice_product = invoice_product.filter(name__icontains=product_name)
+
+        if from_date and to_date:
+            # If both from_date and to_date are provided, filter by name and date range
+            from_date_obj = timezone.make_aware(datetime.strptime(from_date, "%Y-%m-%d"))
+            to_date_obj = timezone.make_aware(datetime.strptime(to_date, "%Y-%m-%d"))
+            
+            invoice_product = invoice_product.filter(
+                name__icontains=product_name,
+                created_at__range=[from_date_obj, to_date_obj]
+            )
+
+        return render(request, 'ERP/productledger.html', {'invoice_product': invoice_product})
+
+
+
+def get_delivery_data(request):
+    # Assuming you have a DeliveryAdd model in your models.py file
+
+
+    if 'posid' in request.GET:
+        posid = request.GET['posid']
+        print(posid)
+        # Fetch DeliveryAdd data based on posid
+        delivery_data = DeleveryAdd.objects.filter(pos_id =posid).values()
+
+        return JsonResponse({'delivery_data': list(delivery_data)})
+
+    return JsonResponse({'error': 'posid not provided'})
+
+
+def get_delivery_data_purchase(request):
+    # Assuming you have a DeliveryAdd model in your models.py file
+
+    if 'posid' in request.GET:
+        posid = request.GET['posid']
+        print(posid)
+        # Fetch DeliveryAdd data based on posid
+        delivery_data = DeleveryAdd.objects.filter(purchase_id = posid).values()
+
+        return JsonResponse({'delivery_data': list(delivery_data)})
+
+    return JsonResponse({'error': 'posid not provided'})
+
+
+
+class Order_Stock(View):
+    def get(self, request):
+        items_per_page = int(request.GET.get('items_per_page', 10))  # Default to 10 items per page
+        product = Product.objects.all()
+
+        paginator = Paginator(product, items_per_page)
+        page = request.GET.get('page')
+
+        try:
+            product = paginator.page(page)
+        except PageNotAnInteger:
+            # If page is not an integer, deliver the first page.
+            product = paginator.page(1)
+        except EmptyPage:
+            # If page is out of range (e.g., 9999), deliver the last page of results.
+            product = paginator.page(paginator.num_pages)
+        return render(request, 'ERP/product_stock.html', {'product_list': product, 'items_per_page': items_per_page})
+
+
+
+
+
+
 
 
 # def get_product_details(request, product_id):

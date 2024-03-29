@@ -1,0 +1,189 @@
+{% extends 'ERP/base.html' %}
+
+{% block title %}New Invoice{% endblock %}
+
+{% block content %}
+
+{% load static %}
+
+<style>
+    #errorshow {
+        color: red;
+        text-align: center;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        font-weight: bolder;
+    }
+
+    .search-container {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+    }
+
+    .search-list {
+        display: none;
+        position: absolute;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1;
+    }
+
+    .search-item {
+        padding: 10px;
+        cursor: pointer;
+    }
+
+    .search-item:hover {
+        background-color: #f5f5f5;
+    }
+
+    .inner-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .inner-table th, .inner-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+</style>
+
+<link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
+
+<div class="search-container">
+    <form action="" method="POST">
+        {% csrf_token %}
+        <input class="search-input" id="productSearch" name="product_name" type="text" placeholder="Search for products">
+        <div class="search-list" id="productList"></div>
+        <div class="d-flex mb-3">
+            <label for="fromDate" class="me-3">From</label>
+            <input type="date" id="fromDate" name="from_date" class="form-control">
+            <label for="toDate" class="me-3 ms-3">To</label>
+            <input type="date" id="toDate" name="to_date" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-warning btnsearch">Search</button>
+    </form>
+    
+</div>
+
+<button id="generatePdfBtn" class="btn btn-primary mt-3">Generate PDF</button>
+
+<div class="container mt-4">
+    <table class="inner-table" id="productTable">
+        <thead>
+            <tr>
+                <th>SO N0.</th>
+                <th>Product Name</th>
+                <th>UNIT</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in invoice_product %}
+                <tr>
+                    <td>{{ product.so_number }}</td>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.unit }}</td>
+                    <td>{{ product.sku }}</td>
+                    <td>{{ product.quantity }}</td>
+                    <td>{{ product.unit_cost }}</td>
+                    <td>{{ product.subtotal }}</td>
+                    <td>{{ product.created_at }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function fetchData(url) {
+        return fetch(url)
+            .then(response => response.json())
+            .then(data => data.product_data || []);
+    }
+
+    function displayDetails(item) {
+        // Customize this function to display details as needed
+        console.log(item);
+    }
+
+    function updateSearchList(inputId, listId, containerId, url) {
+        const input = document.getElementById(inputId);
+        const list = document.getElementById(listId);
+
+        input.addEventListener('focus', async function () {
+            const dataList = await fetchData(url);
+
+            list.style.display = 'block';
+            list.innerHTML = '';
+
+            dataList.forEach(item => {
+                const listItem = document.createElement('div');
+                listItem.classList.add('search-item');
+                listItem.textContent = item.Debtors_Name || item.name;
+
+                listItem.addEventListener('click', async function () {
+                    input.value = item.Debtors_Name || item.name;
+                    list.style.display = 'none';
+                    // Display the full details in the added items container
+                    displayDetails(item);
+                });
+
+                list.appendChild(listItem);
+            });
+        });
+
+        input.addEventListener('blur', function () {
+            setTimeout(() => {
+                list.style.display = 'none';
+            }, 200);
+        });
+
+        input.addEventListener('input', function () {
+            const searchTerm = input.value.toLowerCase();
+            const items = list.getElementsByClassName('search-item');
+
+            Array.from(items).forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+    }
+
+    updateSearchList('productSearch', 'productList', 'productTable', '/product-list/');
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-eaQGWnCjZpX40QjzHsmVQrF4ueMjQe2Y4BSJRv4jgiK7Cpd0Rx98jXeCE6NYbswP" crossorigin="anonymous"></script>
+
+<!-- Add this line to include jsPDF library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+
+<!-- ... your existing code ... -->
+
+
+<script src="{% static "js/timeset.js" %}"></script>
+
+
+
+<!-- ... your existing code ... -->
+
+{% endblock %}

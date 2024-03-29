@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, CustomerList, ActivityLog, Product,SetPos,InvoiceProduct,PartyList, SetPosPurchase, Employee, PaymentMethodname, Voucher,Account, SetPosCancelation
+from .models import CustomUser, CustomerList, ActivityLog, Product,SetPos,InvoiceProduct,PartyList, SetPosPurchase, Employee, PaymentMethodname, Voucher,Account, SetPosCancelation, DeleveryAdd
 
 from import_export.admin import ImportExportModelAdmin
 
@@ -109,7 +109,7 @@ class SetPosResource(resources.ModelResource):
 
 class SetPosAdmin(ImportExportModelAdmin):
     resource_class = SetPosResource
-    list_display = ('customer', 'discount', 'total_subtotal', 'total_with_discount', 'paid_amount', 'due_amount', 'status', 'order_sheet', 'invoice_date', 'delivery_date', 'delivery_status', 'invoice_by', 'systemname')
+    list_display = ('id', 'customer', 'discount', 'total_subtotal', 'total_with_discount', 'paid_amount', 'due_amount', 'status', 'order_sheet', 'invoice_date', 'delivery_date', 'delivery_status', 'invoice_by', 'systemname')
     list_filter = ('status', 'delivery_status', 'invoice_by')
     search_fields = ['customer__Debtors_Name']  # Assuming Debtors_Name is a field in the CustomerList model
 
@@ -196,3 +196,16 @@ class SetPosCancelationAdmin(ImportExportModelAdmin):
     
 
 admin.site.register(SetPosCancelation, SetPosCancelationAdmin)
+
+
+class DeleveryAddResource(resources.ModelResource):
+    class Meta:
+        model = DeleveryAdd
+
+class DeleveryAddAdmin(ImportExportModelAdmin):
+    resource_class = DeleveryAddResource
+    list_display = ('pos_id', 'customer', 'discount', 'total_subtotal', 'total_with_discount', 'paid_amount', 'due_amount', 'status', 'order_sheet', 'invoice_date', 'delivery_date', 'delivery_status', 'invoice_by', 'systemname', 'your_datetime_field')
+    list_filter = ('status', 'delivery_status')
+    search_fields = ('pos_id__name', 'customer__name', 'invoice_by', 'systemname')
+
+admin.site.register(DeleveryAdd, DeleveryAddAdmin)

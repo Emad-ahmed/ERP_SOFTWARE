@@ -54,11 +54,16 @@
 </head>
 <body>
     
-    <div class="maintextarabic">
-        <div>
-            
-        </div>
-    </div>
+    <table style="padding:5px;">
+        <tr>
+            <td>
+                JAWHAR OUD AL RASHED <br> 
+                FRAGNANCE OF NATURE <br> <br>
+                Al Qibla, Block - 7, Building 185, Ground Floor, Shop No. 5/7 <br> <br>
+                Tel: +965 99223382, +965 99255662, +965 60416045, 965 60416046
+            </td>
+        </tr>
+    </table>
 
     <div>
         <h1 class="mainstatus">{{ status }}</h1>
@@ -105,8 +110,8 @@
                         <td style="text-align:center; padding:5px">{{ product.name }}</td>
                         <td style="text-align:center; padding:5px">{{ product.unit }}</td>
                         <td style="text-align:center; padding:5px">{{ product.quantity }}</td>
-                        <td style="text-align:center; padding:5px">{{ product.unit_cost }}</td>
-                        <td style="text-align:center; padding:5px">{{ product.subtotal }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.unit_cost|floatformat:2 }}</td>
+                        <td style="text-align:center; padding:5px">{{ product.subtotal|floatformat:2 }}</td>
                     </tr>
                 {% endfor %}
             </tbody>

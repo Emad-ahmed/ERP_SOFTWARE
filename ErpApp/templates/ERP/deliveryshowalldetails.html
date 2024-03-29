@@ -1,0 +1,662 @@
+{% extends 'ERP/base.html' %}
+
+{% block title %}Delivery Complete{% endblock %}
+
+{% block content %}
+
+<style>
+    .productid {
+        display: none;
+    }
+
+    
+    .searchview
+    {
+        margin-top: 2rem;
+        width:30%;
+        margin-left: 5%;
+    }
+    .debotsname
+    {
+        color:blue !important;
+    }
+</style>
+
+{% load static %}
+<link rel="stylesheet" href="{% static "css/transaction.css" %}">
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<link rel="stylesheet" href="{% static "css/neinvoice.css" %}">
+<link rel="stylesheet" href="https://cdnjs.cloudfla xre.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<h1 class="text-center mt-3 mb-3">Sale Order Delivery</h1>
+
+<div class="items-per-page w-25">
+    <label for="itemsPerPage">Items per page:</label>
+    <select id="itemsPerPage" class="form-control">
+        <option value="10" {% if items_per_page == 10 %}selected{% endif %}>10</option>
+        <option value="20" {% if items_per_page == 20 %}selected{% endif %}>20</option>
+        <option value="30" {% if items_per_page == 30 %}selected{% endif %}>30</option>
+        <option value="40" {% if items_per_page == 40 %}selected{% endif %}>40</option>
+        <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
+        <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
+        <option value="200" {% if items_per_page == 200 %}selected{% endif %}>200</option>
+        <option value="500" {% if items_per_page == 500 %}selected{% endif %}>500</option>
+        <option value="1000" {% if items_per_page == 1000 %}selected{% endif %}>1000</option>
+    </select>
+</div>
+<div class="searchview">
+<input type="text" id="searchInput" class="form-control" placeholder="Search by Customer Name">
+</div>
+
+<div class="modal fade" id="exampleModal6" tabindex="-1" aria-labelledby="exampleModalLabel6" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="exampleModalLabel6">Show All Product</h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<!-- Add this somewhere in your HTML, usually at the end of your file -->
+
+
+
+
+
+<!-- Your home page content goes here -->
+<div class="dropdown columnvisibilty">
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="toggleColumnsDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Column Visibility
+    </button>
+    <div class="dropdown-menu" aria-labelledby="toggleColumnsDropdown" id="toggleColumnsDropdownMenu">
+        <!-- Options will be dynamically added here -->
+    </div>
+</div>
+<table class="pos-table">
+    <thead>
+        <tr>
+            <th class="posid">SO ID</th>
+            <th class="productid">ID</th>
+            <th>Customer</th>
+            <th>Total with Discount</th>
+            <th>Discount</th>
+            <th>Total Subtotal</th>
+            <th>Paid Amount</th>
+            <th>Due Amount</th>
+            <th>Products</th>
+            <th>Status</th>
+            <th>Invoice Date</th>
+            <th>Invoice By</th>
+            <th>Paid Or Due</th>
+           
+            <th>Action</th>
+            <th>View</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for pos in pos_page %}
+        {% if pos.purchase_id is None %}
+        <tr>
+            <td class="posid">{{ pos.id }}</td>
+            <td class="productid">{{ pos.pos_id.customer.id }}</td>
+            <td><a href="{% url 'customerDetailsaccount' pos.customer.id %}" class="debotsname">{{ pos.customer.Debtors_Name }}</a></td>            
+            <td>{{ pos.total_with_discount }}</td>
+            <td>{{ pos.discount }}</td>
+            <td>{{ pos.total_subtotal }}</td>
+            <td>{{ pos.pos_id.paid_amount }}</td>
+            <td>{{ pos.pos_id.due_amount }}</td>
+            <td>
+                <button class="generatePdfButton btn btn-warning" data-target="{{ forloop.counter }}">PDF</button>
+                <table class="inner-table" id="innerTable{{ forloop.counter }}">
+                    <thead>
+                        <tr>
+                            
+                            <th>Product Name</th>
+                            <th>UNIT</th>
+                            <th>SKU</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in pos.products.all %}
+                        <tr>
+                            <td><input type="text" class="name-input" value="{{ product.name }}"></td>
+                            <td><input type="text" class="unit-input" value="{{ product.unit }}"></td>
+                            <td><input type="text" class="sku-input" value="{{ product.sku }}"></td>
+                            <td><input type="number" class="quantity-input" value="{{ product.quantity }}"></td>
+                            <td><input type="number" class="unit-cost-input" value="{{ product.unit_cost }}"></td>
+                            <td><input type="number" class="subtotal-input" value="{{ product.subtotal }}"></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </td>
+            <td>{{ pos.status }}</td>
+            <td>{{ pos.invoice_date }}</td>
+            <td>{{ pos.invoice_by }}</td>
+            <td>
+                {% if pos.pos_id.paid_amount|floatformat:3 == pos.pos_id.total_with_discount|floatformat:3 %}
+                    Paid
+                {% else %}
+                    Due
+                {% endif %}
+            </td>
+            
+            <td><button class="deleteButton btn btn-danger" data-target="{{ pos.id }}"><i class="fa fa-trash-o" aria-hidden="true"></i></button></td>
+            <td><button type="button" class="btn btn-primary viewButton" data-bs-toggle="modal" data-bs-target="#exampleModal6" data-rowid="{{ forloop.counter }}">View</button>
+
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="1"></td><!-- colspan should be adjusted based on the number of columns in your table -->
+            <td colspan="1"></td>
+            <td colspan="1"></td>
+            <td colspan="2"><p class="totalAmount fw-bolder"></p></td>
+            <td colspan="3"><p class="totalSubtotal fw-bolder"></p></td>
+            <td colspan="2"><p class="totalpaidAmount fw-bolder"></p></td>
+        </tr>
+        
+    </tfoot>
+</table>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if pos_page.has_previous %}
+            <a href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-info">&laquo; first</a>
+            <a href="?page={{ pos_page.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-primary">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ pos_page.number }} of {{ pos_page.paginator.num_pages }}.
+        </span>
+
+        {% if pos_page.has_next %}
+            <a href="?page={{ pos_page.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-warning">next</a>
+            <a href="?page={{ pos_page.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-success">last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.js"></script>
+
+<script>
+    // Ensure that your CSRF token is included in AJAX requests if needed
+    function getCSRFToken() {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            .split('=')[1];
+        return cookieValue;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const innertables = document.querySelectorAll('.inner-table');
+
+        innertables.forEach(table => {
+            table.style.display = "none";
+        });
+
+        document.querySelectorAll('.generatePdfButton').forEach(button => {
+            button.addEventListener('click', function () {
+                const clickedRowIndex = parseInt(this.getAttribute('data-target')) - 1;
+                const clickedRow = innertables[clickedRowIndex];
+                const outerTableRow = clickedRow.closest('tr');
+
+                const clickedRowData = {
+                    posid: outerTableRow.querySelector('td:nth-child(1)').textContent.trim(),
+                    customerid: outerTableRow.querySelector('td:nth-child(2)').textContent.trim(),
+                    totalWithDiscount: outerTableRow.querySelector('td:nth-child(4)').textContent.trim(),
+                    discount: outerTableRow.querySelector('td:nth-child(5)').textContent.trim(),
+                    totalSubtotal: outerTableRow.querySelector('td:nth-child(6)').textContent.trim(),
+                    status: outerTableRow.querySelector('td:nth-child(8)').textContent.trim(),
+                    invoiceBy: outerTableRow.querySelector('td:nth-child(10)').textContent.trim(),
+                };
+
+                const allRowsData = [clickedRowData];
+
+                allRowsData.forEach(rowData => {
+                    console.log('Row Data:');
+                    console.log('POS ID:', rowData.posid);
+                    console.log('Customer ID:', rowData.customerid);
+                    console.log('Total with Discount:', rowData.totalWithDiscount);
+                    console.log('Discount:', rowData.discount);
+                    console.log('Total Subtotal:', rowData.totalSubtotal);
+                    console.log('Invoice By:', rowData.invoiceBy);
+                    console.log('Status: ', rowData.status);
+                });
+
+                const rowAlreadyExists = doesRowExist(allRowsData, clickedRow);
+                if (!rowAlreadyExists) {
+                    const rowObj = getRowData(clickedRow);
+                    if (rowObj.name !== null) {
+                        allRowsData.push(rowObj);
+                    }
+                }
+
+                const innerTableRows = clickedRow ? clickedRow.querySelectorAll('tbody tr') : [];
+                innerTableRows.forEach(innerRow => {
+                    const innerRowAlreadyExists = doesRowExist(allRowsData, innerRow);
+                    if (!innerRowAlreadyExists) {
+                        const innerRowObj = getRowData(innerRow);
+                        if (innerRowObj.name !== null) {
+                            allRowsData.push(innerRowObj);
+                        }
+                    }
+                });
+
+                // Assuming 'saveInvoice' function is now available
+                saveInvoice(allRowsData, clickedRowData.status);
+            });
+
+        });
+
+        function getRowData(row) {
+            return {
+                name: getValue(row, '.name-input'),
+                unit: getValue(row, '.unit-input'),
+                sku: getValue(row, '.sku-input') ,
+                quantity: parseFloat(getValue(row, '.quantity-input')) || 0,
+                unitCost: parseFloat(getValue(row, '.unit-cost-input')) || 0,
+                subtotal: parseFloat(getValue(row, '.subtotal-input')) || 0
+            };
+        }
+
+        function getValue(row, selector) {
+            const input = row ? row.querySelector(selector) : null;
+            return input ? input.value : null;
+        }
+
+        function saveInvoice(allRowsData, status) {
+            const posId = allRowsData[0].posid;
+            const customerId = allRowsData[0].customerid;
+            const discountValue = allRowsData[0].discount;
+            const totalSubtotal = allRowsData[0].totalSubtotal;
+            const totalWithDiscount = allRowsData[0].totalWithDiscount;
+            
+            const productsArray = allRowsData.slice(1).map(row => ({
+                name: row.name,
+                unit: row.unit,
+                sku: row.sku,
+                quantity: row.quantity,
+                unit_cost: row.unitCost,
+                subtotal: row.subtotal
+            }));
+            
+
+            
+
+            const requestData = {
+                customerId: customerId,  // Include customer ID directly
+                discountValue: discountValue,
+                productsArray: productsArray,
+                totalSubtotal: totalSubtotal,
+                totalWithDiscount: totalWithDiscount,
+                posid: posId
+            };
+
+            console.log('Request Data:', requestData);
+
+            fetch('/generate_return_delivery_invoice_pdf/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify(requestData),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Server Response:', data);
+                    // Handle the response, e.g., show a success message to the user
+                    alert(data.message);
+                    // Optionally, open the generated PDF in a new tab
+                    window.open(data.pdf_url, '_blank');
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        document.querySelectorAll('.editButton').forEach(button => {
+            button.addEventListener('click', function () {
+                // Extract data from the clicked row
+                const clickedRowIndex = parseInt(this.getAttribute('data-target')) - 1;
+                const clickedRow = innertables[clickedRowIndex];
+                const outerTableRow = clickedRow.closest('tr');
+                const clickedRowData = {
+                    posid: outerTableRow.querySelector('td:nth-child(1)').textContent.trim(),
+                    customerid: outerTableRow.querySelector('td:nth-child(2)').textContent.trim(),
+                    totalWithDiscount: outerTableRow.querySelector('td:nth-child(4)').textContent.trim(),
+                    discount: outerTableRow.querySelector('td:nth-child(5)').textContent.trim(),
+                    totalSubtotal: outerTableRow.querySelector('td:nth-child(6)').textContent.trim(),
+                    status: outerTableRow.querySelector('td:nth-child(8)').textContent.trim(),
+                    invoiceBy: outerTableRow.querySelector('td:nth-child(10)').textContent.trim(),
+                };
+
+                // Prepare an array with the clicked row data
+                const allRowsData = [clickedRowData];
+                // Check if the row already exists in the array
+                const rowAlreadyExists = doesRowExist(allRowsData, clickedRow);
+                // If the row doesn't exist, add it to the array
+                if (!rowAlreadyExists) {
+                    const rowObj = getRowData(clickedRow);
+                    if (rowObj.name !== null) {
+                        allRowsData.push(rowObj);
+                    }
+                }
+
+                // Process inner table rows
+                const innerTableRows = clickedRow ? clickedRow.querySelectorAll('tbody tr') : [];
+                innerTableRows.forEach(innerRow => {
+                    const innerRowAlreadyExists = doesRowExist(allRowsData, innerRow);
+                    if (!innerRowAlreadyExists) {
+                        const innerRowObj = getRowData(innerRow);
+                        if (innerRowObj.name !== null) {
+                            allRowsData.push(innerRowObj);
+                        }
+                    }
+                });
+
+                // Call the 'editInvoice' function with the data
+                const allRowsDataJSON = JSON.stringify(allRowsData);
+                // Create a URL with the encoded parameter
+                const newEditInvoiceURL = `/new_edit_invoice?data=${encodeURIComponent(allRowsDataJSON)}`;
+                // Open the new_edit_invoice page with the data as a parameter
+                window.open(newEditInvoiceURL);
+            });
+        });
+
+        function doesRowExist(rowsArray, row) {
+            const rowObj = getRowData(row);
+            return rowsArray.some(existingRow => JSON.stringify(existingRow) === JSON.stringify(rowObj));
+        }
+
+    });
+</script>
+
+<script>
+    $(document).ready(function () {
+        $('#searchInput').on('keyup', function () {
+            const searchTerm = $(this).val().toLowerCase();
+            $('table.pos-table tbody tr').filter(function () {
+                $(this).toggle($(this).text().toLowerCase().includes(searchTerm));
+            });
+        });
+    });
+</script>
+
+<script>
+    // Add an event listener for items per page dropdown change
+    $('#itemsPerPage').on('change', function () {
+        const selectedItemsPerPage = $(this).val();
+        const currentURL = window.location.href;
+
+        // Update the URL with the selected items per page
+        const updatedURL = updateQueryStringParameter(currentURL, 'items_per_page', selectedItemsPerPage);
+
+        // Redirect to the updated URL
+        window.location.href = updatedURL;
+    });
+
+    // Function to update a query string parameter in the URL
+    function updateQueryStringParameter(uri, key, value) {
+        const re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+        const separator = uri.indexOf('?') !== -1 ? "&" : "?";
+        
+        if (uri.match(re)) {
+            return uri.replace(re, '$1' + key + "=" + value + '$2');
+        } else {
+            return uri + separator + key + "=" + value;
+        }
+    }
+</script>
+
+<script>
+    document.querySelectorAll('.voucherButton').forEach(button => {
+        button.addEventListener('click', function () {
+            const posId = this.getAttribute('data-posid');
+            
+            // Display the pos.id in the modal
+            document.getElementById('id_salepos').value = posId;
+    
+            // Open the modal using Bootstrap's modal method
+            $('#voucherModal').modal('show');
+        });
+    });
+    
+</script>
+
+
+<script>
+    // Example Bootstrap validation using the 'needs-validation' class
+    // You may customize this based on your validation requirements
+    (function () {
+        'use strict';
+
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        var forms = document.querySelectorAll('.needs-validation');
+
+        // Loop over them and prevent submission
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+
+                    form.classList.add('was-validated');
+                }, false);
+            });
+    })();
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all elements with the class 'amount' in the table body
+        const amountElements = document.querySelectorAll('tbody td:nth-child(6)');
+
+        // Calculate the total amount
+        const totalAmount = Array.from(amountElements).reduce((total, element) => {
+            const amount = parseFloat(element.textContent) || 0;
+            return total + amount;
+        }, 0);
+
+        // Display the total amount in the designated element
+        document.querySelector('.totalAmount').textContent = "Total Subtotal: " + `${totalAmount.toFixed(2)}`;
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all elements with the class 'amount' in the table body
+        const amountElements = document.querySelectorAll('tbody td:nth-child(7)');
+
+        // Calculate the total amount
+        const totalAmount = Array.from(amountElements).reduce((total, element) => {
+            const amount = parseFloat(element.textContent) || 0;
+            return total + amount;
+        }, 0);
+
+        // Display the total amount in the designated element
+        document.querySelector('.totalSubtotal').textContent = "Total Paid Amount: "+`${totalAmount.toFixed(2)}`;
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all elements with the class 'amount' in the table body
+        const amountElements = document.querySelectorAll('tbody td:nth-child(7)');
+
+        // Calculate the total amount
+        const totalAmount = Array.from(amountElements).reduce((total, element) => {
+            const amount = parseFloat(element.textContent) || 0;
+            return total + amount;
+        }, 0);
+
+        // Display the total amount in the designated element
+        document.querySelector('.totalpaidAmount').textContent = `${totalAmount.toFixed(2)}`;
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const table = document.querySelector('.pos-table');
+      const toggleButtonsContainer = document.getElementById('toggleButtons');
+  
+      // Function to toggle column visibility
+      function toggleColumnVisibility(columnIndex) {
+        const cells = table.querySelectorAll(`td:nth-child(${columnIndex + 1}), th:nth-child(${columnIndex + 1})`);
+  
+        cells.forEach(cell => {
+          cell.style.display = cell.style.display === 'none' ? '' : 'none'; // Toggle visibility
+        });
+      }
+  
+      // Add buttons for each column
+      const columnNames = Array.from(table.querySelector('thead').querySelectorAll('th')).map(th => th.textContent.trim());
+      
+      columnNames.forEach((columnName, index) => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-secondary';
+        button.textContent = columnName;
+        button.addEventListener('click', () => toggleColumnVisibility(index));
+        toggleButtonsContainer.appendChild(button);
+      });
+    });
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const table = document.querySelector('.pos-table');
+        const toggleColumnsDropdownMenu = document.getElementById('toggleColumnsDropdownMenu');
+
+        // Retrieve the column visibility status from localStorage
+        // If not available, initialize with all columns visible
+        let columnVisibility = JSON.parse(localStorage.getItem('columnVisibility')) || Array.from(table.querySelector('thead').querySelectorAll('th')).map(() => true);
+
+        // Function to toggle column visibility
+        function toggleColumnVisibility(columnIndex, button) {
+            const cells = table.querySelectorAll(`td:nth-child(${columnIndex + 1}), th:nth-child(${columnIndex + 1})`);
+
+            // Toggle visibility and update the visibility status in localStorage
+            cells.forEach(cell => {
+                columnVisibility[columnIndex] = !columnVisibility[columnIndex];
+                cell.style.display = columnVisibility[columnIndex] ? '' : 'none';
+            });
+
+            // Save the updated visibility status in localStorage
+            localStorage.setItem('columnVisibility', JSON.stringify(columnVisibility));
+
+            // Change the background color of the clicked button
+            button.style.backgroundColor = columnVisibility[columnIndex] ? '' : 'lightgray';
+            window.location.reload()
+        }
+
+        // Add options for each column to the dropdown
+        const columnNames = Array.from(table.querySelector('thead').querySelectorAll('th')).map(th => th.textContent.trim());
+
+        columnNames.forEach((columnName, index) => {
+            const option = document.createElement('button');
+            option.className = 'dropdown-item';
+            option.textContent = columnName;
+            option.addEventListener('click', () => toggleColumnVisibility(index, option));
+            toggleColumnsDropdownMenu.appendChild(option);
+
+            // Apply initial visibility based on stored state
+            if (!columnVisibility[index]) {
+                const cells = table.querySelectorAll(`td:nth-child(${index + 1}), th:nth-child(${index + 1})`);
+                cells.forEach(cell => {
+                    cell.style.display = 'none';
+                });
+                
+                // Change the background color of the button
+                option.style.backgroundColor = 'lightgray';
+                
+            }
+        });
+    });
+</script>
+
+
+<script>
+    // Add an event listener for delete button click
+    $('.deleteButton').on('click', function () {
+        const posId = $(this).data('target');
+
+        if (confirm('Are you sure you want to delete this record?')) {
+            $.ajax({
+                url: '/delete_delivery_product/',  // Replace with your actual delete URL
+                method: 'POST',
+                data: {
+                    posId: posId,
+                    csrfmiddlewaretoken: getCSRFToken(),
+                },
+                success: function (data) {
+                    console.log('Record deleted successfully:', data);
+                    // Optionally, you can update the UI or show a success message
+                    window.location.reload(); // Reload the page after deletion
+                },
+                error: function (error) {
+                    console.error('Error deleting record:', error);
+                    // Handle errors if needed
+                }
+            });
+        }
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Add an event listener for the view button click
+        document.querySelectorAll('.viewButton').forEach(button => {
+            button.addEventListener('click', function () {
+                // Extract data from the clicked row
+                const clickedRow = this.closest('tr');
+                const allRowsData = getRowData(clickedRow);
+
+                // Get the product table from the clicked row
+                const productTable = clickedRow.querySelector('.inner-table tbody');
+
+                // Clone the product table and append it to the modal body
+                const productTableClone = productTable.cloneNode(true);
+                document.querySelector('#exampleModal6 .modal-body').innerHTML = '';
+                document.querySelector('#exampleModal6 .modal-body').appendChild(productTableClone);
+
+                // Set the table headers dynamically
+                const headerRow = document.querySelector('#exampleModal6 .modal-body .inner-table thead tr');
+                headerRow.innerHTML = '<th>Name</th><th>Unit</th><th>SKU</th><th>Unit Cost</th><th>Subtotal</th>';
+
+                // Open the modal using Bootstrap's modal method
+                $('#exampleModal6').modal('show');
+            });
+        });
+
+        function getRowData(row) {
+            return {
+                name: row.querySelector('.name-input').value,
+                unit: row.querySelector('.unit-input').value,
+                sku: row.querySelector('.sku-input').value,
+                quantity: parseFloat(row.querySelector('.quantity-input').value) || 0,
+                unitCost: parseFloat(row.querySelector('.unit-cost-input').value) || 0,
+                subtotal: parseFloat(row.querySelector('.subtotal-input').value) || 0
+            };
+        }
+    });
+</script>
+
+{% endblock %}

@@ -23,6 +23,48 @@
     {
         color:black !important;
     }
+
+    .messages
+    {
+        margin-top: 1rem;
+        background: red;
+        color:white;
+        text-align:center;
+    }
+
+.top-scroll {
+    width: 10px; /* Set the width of the scrollbar */
+    height: 100%; /* Set the height to cover the entire height of the container */
+    background-color: #f1f1f1; /* Background color of the scrollbar track */
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 999; /* Set a high z-index to make sure it appears on top of other elements */
+
+    /* Styles for the scrollbar thumb */
+    &::-webkit-scrollbar-thumb {
+        background-color: #888; /* Color of the scrollbar thumb */
+        border-radius: 5px; /* Border radius of the scrollbar thumb */
+    }
+
+    /* Styles for the scrollbar track when the scrollbar is being dragged */
+    &::-webkit-scrollbar-track {
+        background-color: #f1f1f1; /* Background color of the scrollbar track */
+    }
+
+    /* Styles for the scrollbar thumb when the scrollbar is being hovered */
+    &:hover::-webkit-scrollbar-thumb {
+        background-color: #555; /* Color of the scrollbar thumb when hovered */
+    }
+
+    /* Styles for the scrollbar track when the scrollbar is being hovered */
+    &:hover::-webkit-scrollbar-track {
+        background-color: #ccc; /* Background color of the scrollbar track when hovered */
+    }
+}
+    
+    
+   
 </style>
 
 {% load static %}
@@ -33,23 +75,22 @@
 
 <h1 class="text-center mt-3 mb-3">Sale Invoice</h1>
 
-<div class="items-per-page w-25">
-    <label for="itemsPerPage">Items per page:</label>
-    <select id="itemsPerPage" class="form-control">
-        <option value="10" {% if items_per_page == 10 %}selected{% endif %}>10</option>
-        <option value="20" {% if items_per_page == 20 %}selected{% endif %}>20</option>
-        <option value="30" {% if items_per_page == 30 %}selected{% endif %}>30</option>
-        <option value="40" {% if items_per_page == 40 %}selected{% endif %}>40</option>
-        <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
-        <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
-        <option value="200" {% if items_per_page == 200 %}selected{% endif %}>200</option>
-        <option value="500" {% if items_per_page == 500 %}selected{% endif %}>500</option>
-        <option value="1000" {% if items_per_page == 1000 %}selected{% endif %}>1000</option>
-    </select>
-</div>
+{% include "ERP/itempage.html" %}
+
 <div class="searchview">
 <input type="text" id="searchInput" class="form-control" placeholder="Search by Customer Name">
 </div>
+
+
+{% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+{% endif %}
 
 <div class="modal fade" id="exampleModal6" tabindex="-1" aria-labelledby="exampleModalLabel6" aria-hidden="true">
     <div class="modal-dialog">
@@ -163,7 +204,8 @@
         <!-- Options will be dynamically added here -->
     </div>
 </div>
-
+<div class="tableview">
+<div class="top-scroll"></div>
 <table class="pos-table">
     <thead>
         <tr>
@@ -180,10 +222,12 @@
             <th>Invoice Date</th>
             <th>Invoice By</th>
             <th>Paid Or Due</th>
+            <th>Delivery Status</th>
             <th>Edit</th>
             <th>Voucher</th>
             <th>Action</th>
             <th>Return</th>
+            <th>Add Delivery</th>
             <th>View</th>
         </tr>
     </thead>
@@ -230,12 +274,13 @@
             <td>{{ pos.invoice_date }}</td>
             <td>{{ pos.invoice_by }}</td>
             <td>
-                {% if pos.paid_amount == pos.total_with_discount %}
+                {% if pos.paid_amount|floatformat:3 == pos.total_subtotal|floatformat:3 %}
                     Paid
                 {% else %}
                     Due
                 {% endif %}
             </td>
+            <td>{{pos.delivery_status}}</td>
             <td class="d-flex">
                 <button class="editButton btn btn-info" data-target="{{ forloop.counter }}">Edit</button>
             </td>
@@ -247,6 +292,7 @@
             <td class="d-flex">
                 <button class="returnButton btn btn-warning" data-target="{{ forloop.counter }}">Return</button>
             </td>
+            <td><button class="deliveryButton btn btn-info" data-target="{{ forloop.counter }}">Add Delivery</button></td>
             <td><button type="button" class="btn btn-primary viewButton" data-bs-toggle="modal" data-bs-target="#exampleModal6" data-rowid="{{ forloop.counter }}">View</button>
 
             </td>
@@ -256,15 +302,14 @@
     <tfoot>
         <tr>
             <td colspan="1"></td><!-- colspan should be adjusted based on the number of columns in your table -->
-            <td><p class="totalAmount fw-bolder"></p></td>
-            <td colspan="1"></td>
-            <td><p class="totalSubtotal fw-bolder"></p></td>
-            <td><p class="totalpaidAmount fw-bolder"></p></td>
+            <td colspan="3"><p class="totalAmount fw-bolder"></p></td>
+            <td colspan="3"><p class="totalSubtotal fw-bolder"></p></td>
+            <td colspan="3"><p class="totalpaidAmount fw-bolder"></p></td>
         </tr>
         
     </tfoot>
 </table>
-
+</div>
 <div class="pagination">
     <span class="step-links">
         {% if pos_page.has_previous %}
@@ -471,6 +516,58 @@
         });
 
 
+
+        document.querySelectorAll('.deliveryButton').forEach(button => {
+            button.addEventListener('click', function () {
+                // Extract data from the clicked row
+                const clickedRowIndex = parseInt(this.getAttribute('data-target')) - 1;
+                const clickedRow = innertables[clickedRowIndex];
+                const outerTableRow = clickedRow.closest('tr');
+                const clickedRowData = {
+                    posid: outerTableRow.querySelector('td:nth-child(1)').textContent.trim(),
+                    customerid: outerTableRow.querySelector('td:nth-child(2)').textContent.trim(),
+                    totalWithDiscount: outerTableRow.querySelector('td:nth-child(4)').textContent.trim(),
+                    discount: outerTableRow.querySelector('td:nth-child(5)').textContent.trim(),
+                    totalSubtotal: outerTableRow.querySelector('td:nth-child(6)').textContent.trim(),
+                    status: outerTableRow.querySelector('td:nth-child(8)').textContent.trim(),
+                    invoiceBy: outerTableRow.querySelector('td:nth-child(10)').textContent.trim(),
+                };
+
+                // Prepare an array with the clicked row data
+                const allRowsData = [clickedRowData];
+                // Check if the row already exists in the array
+                const rowAlreadyExists = doesRowExist(allRowsData, clickedRow);
+                // If the row doesn't exist, add it to the array
+                if (!rowAlreadyExists) {
+                    const rowObj = getRowData(clickedRow);
+                    if (rowObj.name !== null) {
+                        allRowsData.push(rowObj);
+                    }
+                }
+
+                // Process inner table rows
+                const innerTableRows = clickedRow ? clickedRow.querySelectorAll('tbody tr') : [];
+                innerTableRows.forEach(innerRow => {
+                    const innerRowAlreadyExists = doesRowExist(allRowsData, innerRow);
+                    if (!innerRowAlreadyExists) {
+                        const innerRowObj = getRowData(innerRow);
+                        if (innerRowObj.name !== null) {
+                            allRowsData.push(innerRowObj);
+                        }
+                    }
+                });
+                
+                // Call the 'editInvoice' function with the data
+                const allRowsDataJSON = JSON.stringify(allRowsData);
+                // Create a URL with the encoded parameter
+                const newEditInvoiceURL = `/delivery_add?data=${encodeURIComponent(allRowsDataJSON)}`;
+                // Open the new_edit_invoice page with the data as a parameter
+                window.open(newEditInvoiceURL);
+            });
+        });
+
+
+
         document.querySelectorAll('.returnButton').forEach(button => {
             button.addEventListener('click', function () {
                 // Extract data from the clicked row
@@ -617,23 +714,7 @@
         }, 0);
 
         // Display the total amount in the designated element
-        document.querySelector('.totalAmount').textContent = `${totalAmount.toFixed(2)}`;
-    });
-</script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Get all elements with the class 'amount' in the table body
-        const amountElements = document.querySelectorAll('tbody td:nth-child(6)');
-
-        // Calculate the total amount
-        const totalAmount = Array.from(amountElements).reduce((total, element) => {
-            const amount = parseFloat(element.textContent) || 0;
-            return total + amount;
-        }, 0);
-
-        // Display the total amount in the designated element
-        document.querySelector('.totalSubtotal').textContent = `${totalAmount.toFixed(2)}`;
+        document.querySelector('.totalAmount').textContent = "Total Subtotal: " +  `${totalAmount.toFixed(2)}`;
     });
 </script>
 
@@ -649,7 +730,23 @@
         }, 0);
 
         // Display the total amount in the designated element
-        document.querySelector('.totalpaidAmount').textContent = `${totalAmount.toFixed(2)}`;
+        document.querySelector('.totalSubtotal').textContent = "Total Paid Amount: " + `${totalAmount.toFixed(2)}`;
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all elements with the class 'amount' in the table body
+        const amountElements = document.querySelectorAll('tbody td:nth-child(8)');
+
+        // Calculate the total amount
+        const totalAmount = Array.from(amountElements).reduce((total, element) => {
+            const amount = parseFloat(element.textContent) || 0;
+            return total + amount;
+        }, 0);
+
+        // Display the total amount in the designated element
+        document.querySelector('.totalpaidAmount').textContent = "Total Due Amount: "+ `${totalAmount.toFixed(2)}`;
     });
 </script>
 

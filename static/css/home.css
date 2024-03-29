@@ -11,11 +11,57 @@ nav a{
 }
 
 
-
-table
-{
+.tableview {
+  width: 90% !important;
   overflow-x: auto !important;
+  overflow-y: scroll; /* or overflow-y: auto; */
+  
+  margin-left: 4rem;
 }
+
+.delivrydatatable
+{
+    width:90% !important;
+    margin:auto;
+}
+
+.delivrydatatable,tr,th,td{
+  border: 1px solid black !important;
+  text-align: center;
+}
+
+.top-scroll {
+  width: 10px; /* Set the width of the scrollbar */
+  height: 100%; /* Set the height to cover the entire height of the container */
+  background-color: #f1f1f1; /* Background color of the scrollbar track */
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 999; /* Set a high z-index to make sure it appears on top of other elements */
+
+  /* Styles for the scrollbar thumb */
+  &::-webkit-scrollbar-thumb {
+      background-color: #888; /* Color of the scrollbar thumb */
+      border-radius: 5px; /* Border radius of the scrollbar thumb */
+  }
+
+  /* Styles for the scrollbar track when the scrollbar is being dragged */
+  &::-webkit-scrollbar-track {
+      background-color: #f1f1f1; /* Background color of the scrollbar track */
+  }
+
+  /* Styles for the scrollbar thumb when the scrollbar is being hovered */
+  &:hover::-webkit-scrollbar-thumb {
+      background-color: #555; /* Color of the scrollbar thumb when hovered */
+  }
+
+  /* Styles for the scrollbar track when the scrollbar is being hovered */
+  &:hover::-webkit-scrollbar-track {
+      background-color: #ccc; /* Background color of the scrollbar track when hovered */
+  }
+}
+
+
 .dropbtn {
 
     color: white !important;
@@ -68,6 +114,11 @@ table
   {
     margin-top: 1rem;
     margin-left: 6.5% !important;
+  }
+
+  #description
+  {
+    border: 1px solid blue !important;
   }
   
   /* Change the background color of the dropdown button when the dropdown content is shown */

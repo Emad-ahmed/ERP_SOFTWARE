@@ -116,7 +116,7 @@
                   <a href="{% url "new_invoice" %}">Inventory List</a>
                   <div class="divider"></div>
                   <a href="{% url "new_invoice" %}">Product Ledger</a>
-                  <a href="{% url "new_invoice" %}">Product Stock</a>
+                  <a href="{% url "order_Stock" %}">Product Stock</a>
                   <a href="{% url "new_invoice" %}">Periodical Stock</a>
                 </div>
               </div>
@@ -124,9 +124,11 @@
               <div class="dropdown">
                 <p class="dropbtn nav-link">Deliveries <i class="fa fa-caret-down" aria-hidden="true"></i></p>
                 <div class="dropdown-content">
-                  <a href="{% url "new_ordersheet" %}">New Order Sheet List</a>
-                  <a href="#">Order Sheet List</a>
-                  <a href="{% url "new_invoice" %}">New Sale Invoice</a>
+                  <a href="{% url "new_ordersheet" %}">Stock In</a>
+                  <a href="{% url "new_ordersheet" %}">Stock Out</a>
+                  <a href="{% url "new_invoice" %}">New Transfer Order</a>
+                  <a href="{% url "delivery_show" %}">Sale Order Deliveries</a>
+                  <a href="{% url "delivery_show_purchase" %}">Purchase Order Deliveries</a>
                 </div>
               </div>
 
@@ -150,6 +152,17 @@
 
                   <a href="{% url "new_invoice" %}">New Bank</a>
                   <a href="{% url "new_invoice" %}">Bank List</a>
+                  
+                </div>
+              </div>
+
+              <div class="dropdown">
+                <p class="dropbtn nav-link">Settings <i class="fa fa-caret-down" aria-hidden="true"></i></p>
+                <div class="dropdown-content">
+                  <a href="{% url "product_ledger" %}">Product Ledger</a>
+                  <div class="divider"></div>
+
+                  
                   
                 </div>
               </div>

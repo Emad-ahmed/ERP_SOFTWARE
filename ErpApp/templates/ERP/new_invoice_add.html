@@ -132,6 +132,11 @@
     <input type="number" min="0" placeholder="Discount">
 </div>
 
+<div class="descriptionview">
+    <textarea  id="description"  class="form-control w-50"></textarea>
+</div>
+
+
 <div class="allbuttonprint mb-5">
     <a href="#" id="draftLink">Draft</a>
     <a href="#" id="QuatationLink">Quotation</a>
@@ -456,6 +461,7 @@
 
     function saveInvoice(status) {
         // Get the customer details
+        const description = document.getElementById('description').value;
         const customerDetails = document.getElementById('customerDetails').textContent.trim();
         const totalSubtotal = parseFloat(document.getElementById('totalSubtotal').textContent) || 0;
         const totalWithDiscount = parseFloat(document.getElementById('totalWithDiscount').textContent) || 0;
@@ -516,6 +522,7 @@
                 discountValue: discountValue,
                 productsArray: productsArray,
                 totalSubtotal: totalSubtotal,
+                description : description,
                 totalWithDiscount: totalWithDiscount,
                 status: status,
             }),

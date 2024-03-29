@@ -182,9 +182,7 @@ class Product(models.Model):
 
         super(Product, self).save(*args, **kwargs)
 
-        
 class InvoiceProduct(models.Model):
-    
     name = models.CharField(max_length=255)
     item_name = models.CharField(max_length=255)
     sku = models.CharField(max_length=255)
@@ -192,9 +190,12 @@ class InvoiceProduct(models.Model):
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
     unit = models.CharField(max_length=100, default="kg")
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
-    
+    created_at = models.DateTimeField(default=timezone.now)
+    so_number = models.CharField(max_length=100, default = "SO", null=True, blank=True)
+    po_number = models.CharField(max_length=100, default = "PO", null=True, blank=True)
     def __str__(self) -> str:
-        return self.name
+        return self.name       
+
 
 class SetPos(models.Model):
     customer = models.ForeignKey(CustomerList, on_delete=models.CASCADE)
@@ -210,14 +211,18 @@ class SetPos(models.Model):
     delivery_date = models.DateTimeField(auto_now_add=True)
     delivery_status = models.CharField(max_length=100, default="incomplete", null=True, blank= True)
     invoice_by = models.CharField(max_length=100)
+    description = models.TextField(null=True, blank=True, default="null")
     systemname = models.CharField(max_length=100,null=True, blank=True)
     cancel_show = models.CharField(max_length=100, default = "show")
+    serial_name = models.CharField(max_length=100, default="SO")
     
     def __str__(self) -> str:
         return self.customer.Debtors_Name
 
 
+
 class SetPosCancelation(models.Model):
+    posid_show = models.ForeignKey(SetPos,on_delete=models.CASCADE, default = 4, blank=True, null=True)
     customer = models.ForeignKey(CustomerList, on_delete=models.CASCADE)
     discount = models.DecimalField(max_digits=5, decimal_places=2)
     total_subtotal = models.DecimalField(max_digits=10, decimal_places=2)
@@ -233,7 +238,10 @@ class SetPosCancelation(models.Model):
     invoice_by = models.CharField(max_length=100)
     systemname = models.CharField(max_length=100,null=True, blank=True)
     your_datetime_field = models.DateTimeField(auto_now_add=True)
+    serial_name = models.CharField(max_length=100, default="SO/CL")
     
+
+
 
 
 class PartyList(models.Model):
@@ -293,10 +301,32 @@ class SetPosPurchase(models.Model):
     branch = models.CharField(max_length=100, null=True, blank=True, default="Head Branch")
     invoice_by = models.CharField(max_length=100)
     approved_by = models.CharField(max_length=100, default="Hussain", null=True, blank=True)
-
+    serial_name = models.CharField(max_length=100, default="PO")
     def __str__(self) -> str:
         return f"{self.id}-{self.party.Party_Name}"
-    
+
+
+
+class DeleveryAdd(models.Model):
+    purchase_id = models.ForeignKey(SetPosPurchase, on_delete=models.CASCADE, blank=True, null=True)
+    pos_id = models.ForeignKey(SetPos, on_delete=models.CASCADE, blank=True, null=True)
+    customer = models.ForeignKey(CustomerList, on_delete=models.CASCADE)
+    discount = models.DecimalField(max_digits=5, decimal_places=2)
+    total_subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    total_with_discount = models.DecimalField(max_digits=10, decimal_places=2)
+    products = models.ManyToManyField(InvoiceProduct)
+    paid_amount = models.FloatField(default =0, null=True, blank=True)
+    due_amount = models.FloatField(default=0)
+    status = models.CharField(max_length=100)
+    order_sheet = models.CharField(max_length=100, default="order", null=True, blank= True)
+    invoice_date = models.DateTimeField(auto_now_add=True)
+    delivery_date = models.DateTimeField(auto_now_add=True)
+    delivery_status = models.CharField(max_length=100, default="incomplete", null=True, blank= True)
+    invoice_by = models.CharField(max_length=100)
+    description = models.TextField(null=True, blank=True, default="null")
+    systemname = models.CharField(max_length=100,null=True, blank=True)
+    your_datetime_field = models.DateTimeField(auto_now_add=True)
+    serial_name = models.CharField(max_length=100, default="SD")
 
 class Employee(models.Model):
     full_name = models.CharField(max_length=255)

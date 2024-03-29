@@ -4,6 +4,7 @@ body, h1, h2, h3, p, ul, li, figure, figcaption, div {
     box-sizing: border-box;
 }
 
+
 .search-container {
     position: relative;
     margin: 20px;
@@ -318,6 +319,10 @@ a {
 a#draftLink {
     background-color: #28a745;
 }
+a#SaveLink {
+    background-color: #28a745;
+}
+
 
 a#CredittLink {
     background-color: #007bff;
@@ -339,6 +344,11 @@ a#CashLink{
     width: 23%;
 }
 
+table
+  {
+    width: 10rem !important;
+    overflow-x: auto !important;
+  }
 
 .mytime
 {
@@ -348,6 +358,11 @@ a#CashLink{
 }
 
 .allbuttonprint
+{
+    margin-left: 5%;
+}
+
+.descriptionview
 {
     margin-left: 5%;
 }
@@ -367,9 +382,8 @@ a#CashLink{
 
 .mytransactionedit
 {
-    position: absolute;
-    right: 5%;
-    top:12rem;
+    
+    margin-left: 60%;
 }
     
 .mytransactionedit a{
@@ -402,4 +416,9 @@ a#CashLink{
     padding: 0.4rem;
     border: 1px solid green;
     margin-bottom: 0.6rem;
+}
+
+.btnsearch
+{
+    padding: -1rem;
 }

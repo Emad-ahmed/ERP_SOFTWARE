@@ -158,6 +158,7 @@
             <th>Edit</th>
             <th>Status</th>
             <th>Voucher</th>
+            <th>Delivery</th>
             <th>Action</th>
         </tr>
     </thead>
@@ -240,6 +241,7 @@
             <td>
                 <button class="voucherButton btn btn-success" data-toggle="modal" data-target="#voucherModal" data-posid="{{ pos.id }}">Voucher</button>
             </td>
+            <td><button class="deliveryButton btn btn-info" data-target="{{ forloop.counter }}">Add Delivery</button></td>
             <td><button class="deleteButton btn btn-danger" data-target="{{ pos.id }}"><i class="fa fa-trash-o" aria-hidden="true"></i></button></td>
           
         </tr>
@@ -406,6 +408,56 @@
                 .catch(error => console.error('Error:', error));
         }
 
+        document.querySelectorAll('.deliveryButton').forEach(button => {
+            button.addEventListener('click', function () {
+                // Extract data from the clicked row
+                const clickedRowIndex = parseInt(this.getAttribute('data-target')) - 1;
+                const clickedRow = innertables[clickedRowIndex];
+                const outerTableRow = clickedRow.closest('tr');
+                const clickedRowData = {
+                    posid: outerTableRow.querySelector('td:nth-child(1)').textContent.trim(),
+                    customerid: outerTableRow.querySelector('td:nth-child(2)').textContent.trim(),
+                    totalWithDiscount: outerTableRow.querySelector('td:nth-child(4)').textContent.trim(),
+                    discount: outerTableRow.querySelector('td:nth-child(5)').textContent.trim(),
+                    totalSubtotal: outerTableRow.querySelector('td:nth-child(6)').textContent.trim(),
+                    status: outerTableRow.querySelector('td:nth-child(8)').textContent.trim(),
+                    invoiceBy: outerTableRow.querySelector('td:nth-child(10)').textContent.trim(),
+                };
+    
+                // Prepare an array with the clicked row data
+                const allRowsData = [clickedRowData];
+                // Check if the row already exists in the array
+                const rowAlreadyExists = doesRowExist(allRowsData, clickedRow);
+                // If the row doesn't exist, add it to the array
+                if (!rowAlreadyExists) {
+                    const rowObj = getRowData(clickedRow);
+                    if (rowObj.name !== null) {
+                        allRowsData.push(rowObj);
+                    }
+                }
+    
+                // Process inner table rows
+                const innerTableRows = clickedRow ? clickedRow.querySelectorAll('tbody tr') : [];
+                innerTableRows.forEach(innerRow => {
+                    const innerRowAlreadyExists = doesRowExist(allRowsData, innerRow);
+                    if (!innerRowAlreadyExists) {
+                        const innerRowObj = getRowData(innerRow);
+                        if (innerRowObj.name !== null) {
+                            allRowsData.push(innerRowObj);
+                        }
+                    }
+                });
+                
+                // Call the 'editInvoice' function with the data
+                const allRowsDataJSON = JSON.stringify(allRowsData);
+                // Create a URL with the encoded parameter
+                const newEditInvoiceURL = `/delivery_add_purchase?data=${encodeURIComponent(allRowsDataJSON)}`;
+                // Open the new_edit_invoice page with the data as a parameter
+                window.open(newEditInvoiceURL);
+            });
+        });
+    
+
         document.querySelectorAll('.editButton').forEach(button => {
             button.addEventListener('click', function () {
                 // Extract data from the clicked row
@@ -502,6 +554,8 @@
         });
 
     });
+
+   
 
 </script>
 
